@@ -1,9 +1,12 @@
-import multiprocessing
 import Server
 import Client
 import logging
 
-multiprocessing.freeze_support()
+# TODO tor / i2p
+# TODO GUI
+# TODO Server handles multiple clients and broadcasts messages
+# TODO Message encryption
+# TODO Handle different sized messages
 
 logging.basicConfig(
     level=logging.INFO,

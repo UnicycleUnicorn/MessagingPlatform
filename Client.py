@@ -1,5 +1,5 @@
 import socket
-import multiprocessing
+import threading
 import logging
 
 
@@ -11,7 +11,7 @@ class Client:
         self.clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.clientSocket.connect((self.host, self.port))
         logging.info("Connected to server")
-        multiprocessing.Process(target=self.__awaitmessage__).start()
+        threading.Thread(target=self.__awaitmessage__).start()
 
     def send(self, message: str):
         if self.clientSocket:
@@ -25,7 +25,7 @@ class Client:
             data = self.clientSocket.recv(1024)
             if not data:
                 break
-            multiprocessing.Process(target=self.__received__, args=(data, )).start()
+            threading.Thread(target=self.__received__, args=(data, )).start()
 
     def __received__(self, message: bytes):
         try:

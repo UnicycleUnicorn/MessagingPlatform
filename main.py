@@ -11,9 +11,10 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
-RUN_AS = 'server'
+RUN_AS_SERVER = True
 
-if RUN_AS == 'server':
+
+if RUN_AS_SERVER:
     server = Server.Server()
 
     # Loop to receive and send messages
@@ -26,7 +27,7 @@ if RUN_AS == 'server':
 
     del server
 
-elif RUN_AS == 'client':
+else:
     client = Client.Client("10.127.28.65")
 
     # Loop to receive and send messages

@@ -13,7 +13,7 @@ class HeaderFormat:
         arr[self.offset: self.offset + self.length] = item
 
 
-MESSAGE_LENGTH = HeaderFormat(2)
+MESSAGE_LENGTH = HeaderFormat(4)
 
 
 class PacketHeader:

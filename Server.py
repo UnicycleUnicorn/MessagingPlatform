@@ -22,7 +22,7 @@ class Server:
     def send(self, message: str):
         if self.clientSocket:
             packet = Packet.Packet.construct(message)
-            self.clientSocket.send(packet.tobytes())
+            self.clientSocket.sendall(packet.tobytes())
         else:
             logging.info('No client connection')
 
@@ -32,12 +32,18 @@ class Server:
             if not rawhead:
                 break
             head = Packet.PacketHeader.frombytes(rawhead)
-            rawmessage = self.clientSocket.recv(head.messagelength)
-            message = Packet.PacketMessage.frombytes(rawmessage)
+            logging.info(head.messagelength)
+            rawmessage = b''
+            while len(rawmessage) < head.messagelength:
+                logging.warning("CHECKED")
+                newmessage = self.clientSocket.recv(head.messagelength - len(rawmessage))
+                rawmessage += newmessage
+            message = Packet.PacketMessage.frombytes(rawmessage).message
             threading.Thread(target=self.__received__, args=(message,)).start()
 
     def __received__(self, message: str):
-        logging.info(message)
+        #logging.info(message)
+        logging.info("RECIEVED")
 
     def close(self):
         if self.clientSocket:

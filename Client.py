@@ -17,7 +17,7 @@ class Client:
     def send(self, message: str):
         if self.clientSocket:
             packet = Packet.Packet.construct(message)
-            self.clientSocket.send(packet.tobytes())
+            self.clientSocket.sendall(packet.tobytes())
         else:
             logging.info('No server connection')
 
@@ -28,7 +28,7 @@ class Client:
                 break
             head = Packet.PacketHeader.frombytes(rawhead)
             rawmessage = self.clientSocket.recv(head.messagelength)
-            message = Packet.PacketMessage.frombytes(rawmessage)
+            message = Packet.PacketMessage.frombytes(rawmessage).message
             threading.Thread(target=self.__received__, args=(message, )).start()
 
     def __received__(self, message: str):

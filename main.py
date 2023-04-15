@@ -2,11 +2,13 @@ import Server
 import Client
 import logging
 
-# TODO tor / i2p
-# TODO GUI
-# TODO Server handles multiple clients and broadcasts messages
-# TODO Message encryption
-# TODO Handle different sized messages
+# TODO: tor / i2p
+# TODO: GUI
+# TODO: Server handles multiple clients and broadcasts messages
+# TODO: Message encryption
+# TODO: Handle different sized messages
+# TODO: Try using different ports
+# TODO: Send images
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,6 +41,11 @@ else:
         message = input('Enter your message: ')
         if message == "x":
             break
+        if message == 'file':
+            with open('send.txt', 'r') as file:
+                message = file.read()
+
         client.send(message)
 
     del client
+

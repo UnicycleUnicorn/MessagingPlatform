@@ -14,17 +14,18 @@ import logging
 # TODO: Version Checking
 # TODO: Message IDs
 # TODO: Cross-network communication
+# TODO: UDP
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(process)s %(levelname)s %(message)s",
+    format="%(message)s",
     handlers=[logging.StreamHandler()]
 )
 
 RUN_AS_SERVER = True
 
 if RUN_AS_SERVER:
-    server = Server.Server()
+    server = Server.Server(8888)
 
     # Loop to receive and send messages
     while True:
@@ -37,7 +38,7 @@ if RUN_AS_SERVER:
     del server
 
 else:
-    client = Client.Client("10.127.28.69")
+    client = Client.Client(8888, "10.127.28.69")
 
     # Loop to receive and send messages
     while True:

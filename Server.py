@@ -5,10 +5,10 @@ import Packet
 
 
 class Server:
-    def __init__(self):
+    def __init__(self, port: int):
         self.host = socket.gethostbyname(socket.gethostname())
         logging.info(f"IP: {self.host}")
-        self.port = 8888
+        self.port = port
         self.serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.serverSocket.bind((self.host, self.port))
@@ -22,7 +22,7 @@ class Server:
     def send(self, message: str):
         if self.clientSocket:
             packet = Packet.Packet.construct(message)
-            self.clientSocket.sendall(packet.tobytes())
+            self.clientSocket.sendall(packet.to_bytes())
         else:
             logging.info('No client connection')
 
@@ -31,19 +31,19 @@ class Server:
             rawhead = self.clientSocket.recv(Packet.HeaderFormat.TOTAL_LENGTH)
             if not rawhead:
                 break
-            head = Packet.PacketHeader.frombytes(rawhead)
+            head = Packet.PacketHeader.from_bytes(rawhead)
             logging.info(head.messagelength)
             rawmessage = b''
             while len(rawmessage) < head.messagelength:
                 logging.warning("CHECKED")
                 newmessage = self.clientSocket.recv(head.messagelength - len(rawmessage))
                 rawmessage += newmessage
-            message = Packet.PacketMessage.frombytes(rawmessage).message
+            message = Packet.PacketMessage.from_bytes(rawmessage).message
             threading.Thread(target=self.__received__, args=(message,)).start()
 
     def __received__(self, message: str):
-        #logging.info(message)
-        logging.info("RECIEVED")
+        logging.info(message)
+        logging.info("RECEIVED")
 
     def close(self):
         if self.clientSocket:

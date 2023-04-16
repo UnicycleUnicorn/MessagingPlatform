@@ -5,9 +5,9 @@ import Packet
 
 
 class Client:
-    def __init__(self, serverip: str):
+    def __init__(self, port: int, serverip: str):
         self.host = serverip
-        self.port = 8888
+        self.port = port
         self.clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.clientSocket.connect((self.host, self.port))
@@ -17,7 +17,7 @@ class Client:
     def send(self, message: str):
         if self.clientSocket:
             packet = Packet.Packet.construct(message)
-            self.clientSocket.sendall(packet.tobytes())
+            self.clientSocket.sendall(packet.to_bytes())
         else:
             logging.info('No server connection')
 
@@ -26,9 +26,9 @@ class Client:
             rawhead = self.clientSocket.recv(Packet.HeaderFormat.TOTAL_LENGTH)
             if not rawhead:
                 break
-            head = Packet.PacketHeader.frombytes(rawhead)
+            head = Packet.PacketHeader.from_bytes(rawhead)
             rawmessage = self.clientSocket.recv(head.messagelength)
-            message = Packet.PacketMessage.frombytes(rawmessage).message
+            message = Packet.PacketMessage.from_bytes(rawmessage).message
             threading.Thread(target=self.__received__, args=(message, )).start()
 
     def __received__(self, message: str):

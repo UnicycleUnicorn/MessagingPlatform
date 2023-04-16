@@ -11,6 +11,9 @@ import logging
 # TODO: Send images
 # TODO: Use markdown for text formatting
 # TODO: Different message types
+# TODO: Version Checking
+# TODO: Message IDs
+# TODO: Cross-network communication
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,7 +22,6 @@ logging.basicConfig(
 )
 
 RUN_AS_SERVER = True
-
 
 if RUN_AS_SERVER:
     server = Server.Server()
@@ -50,4 +52,3 @@ else:
         client.send(message)
 
     del client
-

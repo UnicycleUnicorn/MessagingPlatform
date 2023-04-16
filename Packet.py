@@ -43,7 +43,6 @@ class MessageType(Enum):
     HEARTBEAT = 2
     CHAT = 3
 
-    @classmethod
     def __new__(cls, value: int):
         obj = object.__new__(cls)
         obj._value_ = value

@@ -6,9 +6,11 @@ import logging
 # TODO: GUI
 # TODO: Server handles multiple clients and broadcasts messages
 # TODO: Message encryption
-# TODO: Handle different sized messages
+# COMPLETED: Handle different sized messages
 # TODO: Try using different ports
 # TODO: Send images
+# TODO: Use markdown for text formatting
+# TODO: Different message types
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,7 +35,7 @@ if RUN_AS_SERVER:
     del server
 
 else:
-    client = Client.Client("10.127.28.65")
+    client = Client.Client("10.127.28.69")
 
     # Loop to receive and send messages
     while True:

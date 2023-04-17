@@ -10,21 +10,22 @@ class NetworkHandler:
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        if self.HOST == "":
-            self.SOCKET.bind((self.HOST, self.PORT))
+        self.SOCKET.bind(('', self.PORT))
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.LISTENERS: list[Callable[[Tuple[str, int], Packet.Packet], None]] = []
         threading.Thread(target=self.__listen__).start()
 
     def __listen__(self):
         while True:
-            raw_header, sender = self.SOCKET.recvfrom(Packet.HeaderFormat.TOTAL_LENGTH)
+            sender = None
+            raw_header = self.SOCKET.recv(Packet.HeaderFormat.TOTAL_LENGTH)
             if not raw_header:
                 break
             header = Packet.PacketHeader.from_bytes(raw_header)
             raw_message = b''
             while len(raw_message) < header.messagelength:
-                raw_message += self.SOCKET.recvfrom(header.messagelength - len(raw_message))[1]
+                raw_mes_new, sender = self.SOCKET.recvfrom(header.messagelength - len(raw_message))
+                raw_message += raw_mes_new
             threading.Thread(target=self.__received_message__, args=(header, raw_message, sender)).start()
 
     def __received_message__(self, header: Packet.PacketHeader, raw_message: bytes, sender: Tuple[str, int]):
@@ -39,9 +40,8 @@ class NetworkHandler:
         if recipient is None:
             recipient = (self.HOST, self.PORT)
         try:
-            with self.SOCKET as sock:
-                sock.sendto(packet.to_bytes(), recipient)
-                return True
+            self.SOCKET.sendto(packet.to_bytes(), recipient)
+            return True
         except socket.error as e:
             logging.info(f"Failed to send packet: {e}")
             return False

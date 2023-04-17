@@ -21,6 +21,7 @@ print(f"IP Address: {ip_address}")
 # TODO: Message IDs
 # TODO: Cross-network communication
 # TODO: UDP
+# TODO: Daemon threads instead
 
 Version = '0.0-0.0'
 
@@ -42,10 +43,8 @@ if RUN_AS_SERVER:
         if message == "x":
             break
 
-    del server
-
 else:
-    client = Client.Client(8888, "10.127.28.99")
+    client = Client.Client(8888, "10.127.28.155")
 
     # Loop to receive and send messages
     while True:
@@ -55,5 +54,3 @@ else:
             break
 
         client.send(message)
-
-    del client

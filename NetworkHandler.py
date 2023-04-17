@@ -10,7 +10,8 @@ class NetworkHandler:
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.SOCKET.bind((self.HOST, self.PORT))
+        if self.HOST == "":
+            self.SOCKET.bind((self.HOST, self.PORT))
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.LISTENERS: list[Callable[[Tuple[str, int], Packet.Packet], None]] = []
         threading.Thread(target=self.__listen__).start()
@@ -23,7 +24,7 @@ class NetworkHandler:
             header = Packet.PacketHeader.from_bytes(raw_header)
             raw_message = b''
             while len(raw_message) < header.messagelength:
-                raw_message += self.SOCKET.recvfrom(header.messagelength - len(raw_message))
+                raw_message += self.SOCKET.recvfrom(header.messagelength - len(raw_message))[1]
             threading.Thread(target=self.__received_message__, args=(header, raw_message, sender)).start()
 
     def __received_message__(self, header: Packet.PacketHeader, raw_message: bytes, sender: Tuple[str, int]):

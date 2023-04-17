@@ -30,7 +30,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
-RUN_AS_SERVER = False
+RUN_AS_SERVER = True
 
 if RUN_AS_SERVER:
     server = Server.Server(8888)

@@ -38,7 +38,7 @@ if RUN_AS_SERVER:
     del server
 
 else:
-    client = Client.Client(8888, "10.127.28.69")
+    client = Client.Client(8888, "10.127.28.99")
 
     # Loop to receive and send messages
     while True:

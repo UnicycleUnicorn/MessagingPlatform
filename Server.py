@@ -22,6 +22,7 @@ class Server:
     def send(self, message: str):
         if self.clientSocket:
             packet = Packet.Packet.construct(message)
+            logging.info(packet.__str__())
             self.clientSocket.sendall(packet.to_bytes())
         else:
             logging.info('No client connection')
@@ -38,11 +39,15 @@ class Server:
                 logging.warning("CHECKED")
                 newmessage = self.clientSocket.recv(head.messagelength - len(rawmessage))
                 rawmessage += newmessage
-            message = Packet.PacketMessage.from_bytes(rawmessage).message
-            threading.Thread(target=self.__received__, args=(message,)).start()
+
+            messagepacket = Packet.PacketMessage.from_bytes(rawmessage)
+            packet = Packet.Packet(head, messagepacket)
+            logging.info(packet.__str__())
+            messagetext = messagepacket.message
+            threading.Thread(target=self.__received__, args=(messagetext,)).start()
 
     def __received__(self, message: str):
-        logging.info(message)
+        #logging.info(message)
         logging.info("RECEIVED")
 
     def close(self):

@@ -30,7 +30,7 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 
 if RUN_AS_SERVER:
     server = Server.Server(8888)
@@ -53,13 +53,7 @@ else:
         message = input('Enter your message: ')
         if message == "x":
             break
-        if message == 'file':
-            with open('send.txt', 'r') as file:
-                message = file.read()
 
         client.send(message)
 
     del client
-
-
-

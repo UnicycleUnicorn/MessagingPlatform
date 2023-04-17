@@ -22,11 +22,11 @@ class HeaderFormat:
         arr[self.offset: self.offset + self.length] = item
 
 
-MESSAGE_ID = HeaderFormat(3)        # bytes
-MESSAGE_TYPE = HeaderFormat(1)      # MessageType
-MESSAGE_LENGTH = HeaderFormat(4)    # int
-USER_ID = HeaderFormat(4)           # int
-UNIX_TIME = HeaderFormat(4)         # int
+MESSAGE_ID = HeaderFormat(3)  # bytes
+MESSAGE_TYPE = HeaderFormat(1)  # MessageType
+MESSAGE_LENGTH = HeaderFormat(4)  # int
+USER_ID = HeaderFormat(4)  # int
+UNIX_TIME = HeaderFormat(4)  # int
 
 
 class MessageType(Enum):
@@ -55,7 +55,7 @@ class MessageType(Enum):
             if mtype.bytes_value == b:
                 return mtype
         raise ValueError(f"No MessageType with value {b}")
-    
+
     def to_bytes(self):
         return self.bytes_value
 
@@ -70,6 +70,7 @@ class PacketHeader:
     * User ID - int representing the sending users id
     * Unix Time - int representing the time the message was sent
     """
+
     def __init__(self, messageid: bytes, messagetype: MessageType, messagelength: int, userid: int, unixtime: int):
         self.messageid = messageid
         self.messagelength = messagelength
@@ -140,7 +141,8 @@ class Packet:
     @classmethod
     def construct(cls, message: str):
         packmessage = PacketMessage(message)
-        packheader = PacketHeader(secrets.token_bytes(MESSAGE_ID.length), MessageType.CHAT, len(packmessage.to_bytes()), 1563, int(time.time()))
+        packheader = PacketHeader(secrets.token_bytes(MESSAGE_ID.length), MessageType.CHAT, len(packmessage.to_bytes()),
+                                  1563, int(time.time()))
         return Packet(packheader, packmessage)
 
     def to_bytes(self) -> bytes:

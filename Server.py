@@ -9,7 +9,6 @@ class Server:
         self.handler = NetworkHandler.NetworkHandler(port)
         self.handler.add_listener(self.__recv__)
 
-
     def send(self, message: str, recipient: Tuple[str, int]):
         packet = Packet.Packet.construct(message)
         if self.handler.send(packet, recipient):
@@ -22,4 +21,3 @@ class Server:
         logging.info(packet.__str__())
         logging.info("")
         self.send("SERVER RECEIVED PACKET", sender)
-

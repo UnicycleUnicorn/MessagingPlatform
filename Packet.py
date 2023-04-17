@@ -43,37 +43,6 @@ class FooterFormat:
         arr[self.offset: self.offset + self.length] = item
 
 
-class PayloadType(Enum):
-    """
-    Type / format of message in the packet:
-        * CONNECT\n
-        * DISCONNECT\n
-        * HEARTBEAT\n
-        * CHAT
-    """
-
-    CONNECT = 0
-    DISCONNECT = 1
-    HEARTBEAT = 2
-    CHAT = 3
-
-    def __new__(cls, value: int):
-        obj = object.__new__(cls)
-        obj._value_ = value
-        obj.bytes_value = value.to_bytes(length=Footer.PAYLOAD_TYPE.length, byteorder='big')
-        return obj
-
-    @classmethod
-    def from_bytes(cls, b: bytes) -> 'PayloadType':
-        for mtype in cls:
-            if mtype.bytes_value == b:
-                return mtype
-        raise ValueError(f"No MessageType with value {b}")
-
-    def to_bytes(self):
-        return self.bytes_value
-
-
 class Header:
     """
     Automatically create a packet header and transform it into a serialized object.
@@ -125,6 +94,37 @@ class Header:
         return f"HEADER:\n    MessageID: {self.messageid}\n    PacketCount: {self.packetcount}\n    SequenceNumber: {self.packetsequencenumber}\n"
 
 
+class PayloadType(Enum):
+    """
+    Type / format of message in the packet:
+        * CONNECT\n
+        * DISCONNECT\n
+        * HEARTBEAT\n
+        * CHAT
+    """
+
+    CONNECT = 0
+    DISCONNECT = 1
+    HEARTBEAT = 2
+    CHAT = 3
+
+    def __new__(cls, value: int):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.bytes_value = value.to_bytes(length=1, byteorder='big') # MAKE SURE TO CHANGE LENGTH IF PAYLOAD_TYPE LENGTH CHANGES
+        return obj
+
+    @classmethod
+    def from_bytes(cls, b: bytes) -> 'PayloadType':
+        for mtype in cls:
+            if mtype.bytes_value == b:
+                return mtype
+        raise ValueError(f"No MessageType with value {b}")
+
+    def to_bytes(self):
+        return self.bytes_value
+
+
 class Footer:
     """
     Automatically create a packet footer and transform it into a serialized object.
@@ -174,6 +174,7 @@ class Footer:
 
     def __str__(self) -> str:
         return f"FOOTER:\n    PayloadType: {self.payloadtype}\n    UserID: {self.userid}\n    UnixTime: {self.unixtime}\n"
+
 
 
 class Packet:

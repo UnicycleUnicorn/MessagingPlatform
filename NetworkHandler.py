@@ -17,19 +17,13 @@ class NetworkHandler:
 
     def __listen__(self):
         while True:
-            sender = None
-            raw_header = self.SOCKET.recv(Packet.HeaderFormat.LENGTH)
-            if not raw_header:
+            raw_packet, sender = self.SOCKET.recvfrom(Packet.Packet.MAX_PACKET_SIZE)
+            if not raw_packet:
                 break
-            header = Packet.Header.from_bytes(raw_header)
-            raw_message = b''
-            while len(raw_message) < header.messagelength:
-                raw_mes_new, sender = self.SOCKET.recvfrom(header.messagelength - len(raw_message))
-                raw_message += raw_mes_new
-            threading.Thread(target=self.__received_message__, args=(header, raw_message, sender)).start()
+            threading.Thread(target=self.__received_message__, args=(raw_packet, sender)).start()
 
-    def __received_message__(self, header: Packet.Header, raw_message: bytes, sender: Tuple[str, int]):
-        packet = Packet.Packet(header, Packet.Payload.from_bytes(raw_message))
+    def __received_message__(self, raw_packet: bytes, sender: Tuple[str, int]):
+        packet = Packet.Packet.from_bytes(raw_packet)
         for listener in self.LISTENERS:
             listener(sender, packet)
 

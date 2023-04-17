@@ -35,7 +35,7 @@ logging.basicConfig(
 RUN_AS_SERVER = True
 
 if RUN_AS_SERVER:
-    server = Server.Server(51278)
+    server = Server.Server(8888)
 
     # Loop to receive and send_packet messages
     while True:

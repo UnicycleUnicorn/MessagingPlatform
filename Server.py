@@ -10,11 +10,11 @@ class Server:
         self.handler.add_listener(self.__recv__)
 
     def send(self, message: str, recipient: Tuple[str, int]):
-        packet = Packet.Packet.construct(message)
-        if self.handler.send(packet, recipient):
-            logging.info("SENT PACKET\n")
+        message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, 69420)
+        if self.handler.send_message(message, recipient):
+            logging.info("SENT MESSAGE\n")
         else:
-            logging.info("UNABLE TO SEND PACKET\n")
+            logging.info("UNABLE TO SEND MESSAGE\n")
 
     def __recv__(self, sender: Tuple[str, int], packet: Packet.Packet):
         logging.info("======== RECEIVED PACKET ========")

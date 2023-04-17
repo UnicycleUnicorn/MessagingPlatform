@@ -22,6 +22,7 @@ print(f"IP Address: {ip_address}")
 # TODO: Cross-network communication
 # TODO: UDP
 # TODO: Daemon threads instead
+# TODO: Abstract payload type (to and from bytes)
 
 Version = '0.0-0.0'
 
@@ -34,9 +35,9 @@ logging.basicConfig(
 RUN_AS_SERVER = True
 
 if RUN_AS_SERVER:
-    server = Server.Server(8888)
+    server = Server.Server(51278)
 
-    # Loop to receive and send messages
+    # Loop to receive and send_packet messages
     while True:
         # Send message to client
         message = input('Enter x to quit:')
@@ -46,7 +47,7 @@ if RUN_AS_SERVER:
 else:
     client = Client.Client(8888, "10.127.28.155")
 
-    # Loop to receive and send messages
+    # Loop to receive and send_packet messages
     while True:
         # Send message to client
         message = input('Enter your message: ')

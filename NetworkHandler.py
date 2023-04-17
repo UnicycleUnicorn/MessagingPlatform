@@ -18,25 +18,25 @@ class NetworkHandler:
     def __listen__(self):
         while True:
             sender = None
-            raw_header = self.SOCKET.recv(Packet.HeaderFormat.TOTAL_LENGTH)
+            raw_header = self.SOCKET.recv(Packet.HeaderFormat.LENGTH)
             if not raw_header:
                 break
-            header = Packet.PacketHeader.from_bytes(raw_header)
+            header = Packet.Header.from_bytes(raw_header)
             raw_message = b''
             while len(raw_message) < header.messagelength:
                 raw_mes_new, sender = self.SOCKET.recvfrom(header.messagelength - len(raw_message))
                 raw_message += raw_mes_new
             threading.Thread(target=self.__received_message__, args=(header, raw_message, sender)).start()
 
-    def __received_message__(self, header: Packet.PacketHeader, raw_message: bytes, sender: Tuple[str, int]):
-        packet = Packet.Packet(header, Packet.PacketMessage.from_bytes(raw_message))
+    def __received_message__(self, header: Packet.Header, raw_message: bytes, sender: Tuple[str, int]):
+        packet = Packet.Packet(header, Packet.Payload.from_bytes(raw_message))
         for listener in self.LISTENERS:
             listener(sender, packet)
 
     def add_listener(self, listener: Callable[[Tuple[str, int], Packet.Packet], None]):
         self.LISTENERS.append(listener)
 
-    def send(self, packet: Packet.Packet, recipient=None) -> bool:
+    def send_packet(self, packet: Packet.Packet, recipient=None) -> bool:
         if recipient is None:
             recipient = (self.HOST, self.PORT)
         try:
@@ -46,49 +46,13 @@ class NetworkHandler:
             logging.info(f"Failed to send packet: {e}")
             return False
 
-
-""" UDP SERVER
-import socket
-
-HOST = ''  # Listen on all available interfaces
-PORT = 12345
-
-# Create a socket object
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-# Bind the socket to a specific address and port
-server_socket.bind((HOST, PORT))
-
-while True:
-    # Receive data from client
-    data, client_address = server_socket.recvfrom(1024)
-
-    # Process the data
-    print(f"Received data from {client_address}: {data.decode()}")
-
-    # Send a response back to the client
-    server_socket.sendto(b"Response message", client_address)
-"""
-
-""" UDP CLIENT
-import socket
-
-HOST = '10.0.0.33'  # Replace with your friend's IP address
-PORT = 12345
-
-# Create a socket object
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-while True:
-    # Get input from user
-    message = input("Enter message: ")
-
-    # Send message to server
-    client_socket.sendto(message.encode(), (HOST, PORT))
-    
-    # Receive response from server
-    response, server_address = client_socket.recvfrom(1024)
-
-    # Process the response
-    print(f"Received response from {server_address}: {response.decode()}")
-"""
+    def send_message(self, message: Packet.Message, recipient=None) -> bool:
+        if recipient is None:
+            recipient = (self.HOST, self.PORT)
+        try:
+            for packetbytes in message.to_bytes_list():
+                self.SOCKET.sendto(packetbytes, recipient)
+            return True
+        except socket.error as e:
+            logging.info(f"Failed to send message: {e}")
+            return False

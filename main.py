@@ -1,6 +1,12 @@
 import Server
 import Client
 import logging
+import socket
+
+hostname = socket.gethostname()
+ip_address = socket.gethostbyname(hostname)
+print(f"Hostname: {hostname}")
+print(f"IP Address: {ip_address}")
 
 # TODO: tor / i2p
 # TODO: GUI
@@ -16,6 +22,8 @@ import logging
 # TODO: Cross-network communication
 # TODO: UDP
 
+Version = '0.0-0.0'
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
@@ -30,10 +38,9 @@ if RUN_AS_SERVER:
     # Loop to receive and send messages
     while True:
         # Send message to client
-        message = input('Enter your message: ')
+        message = input('Enter x to quit:')
         if message == "x":
             break
-        server.send(message)
 
     del server
 
@@ -53,3 +60,6 @@ else:
         client.send(message)
 
     del client
+
+
+

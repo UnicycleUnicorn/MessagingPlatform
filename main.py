@@ -1,6 +1,5 @@
 import Server
 import Client
-import logging
 import socket
 
 hostname = socket.gethostname()
@@ -18,38 +17,30 @@ print(f"IP Address: {ip_address}")
 # TODO: Use markdown for text formatting
 # TODO: Different message types
 # TODO: Version Checking
-# TODO: Message IDs
+# COMPLETED: Message IDs
 # TODO: Cross-network communication
-# TODO: UDP
-# TODO: Daemon threads instead
+# COMPLETED: UDP
 # TODO: Abstract payload type (to and from bytes)
+# TODO: Make MessageReconstructor thread-safe: may be editing items at the same time right now
 
 Version = '0.0-0.0'
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[logging.StreamHandler()]
-)
 
 RUN_AS_SERVER = True
+PORT = 8888
 
 if RUN_AS_SERVER:
-    server = Server.Server(8888)
+    server = Server.Server()
 
-    # Loop to receive and send_packet messages
     while True:
-        # Send message to client
-        message = input('Enter x to quit:')
+        message = input()
         if message == "x":
             break
 
 else:
-    client = Client.Client(8888, "10.127.28.155")
+    client = Client.Client("10.127.28.155")
 
-    # Loop to receive and send_packet messages
     while True:
-        # Send message to client
         message = input('Enter your message: ')
         if message == "x":
             break

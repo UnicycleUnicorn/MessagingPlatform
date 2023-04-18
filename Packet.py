@@ -2,7 +2,7 @@ from enum import Enum
 import time
 import secrets
 import math
-from typing import List
+from typing import List, Tuple
 
 
 class HeaderFormat:
@@ -72,7 +72,8 @@ class Header:
         packetcount = self.packetcount.to_bytes(length=Header.PACKET_COUNT.length, byteorder='big')
         Header.PACKET_COUNT.set_to(arr, bytearray(packetcount))
 
-        packetsequencenumber = self.packetsequencenumber.to_bytes(length=Header.PACKET_SEQUENCE_NUMBER.length, byteorder='big')
+        packetsequencenumber = self.packetsequencenumber.to_bytes(length=Header.PACKET_SEQUENCE_NUMBER.length,
+                                                                  byteorder='big')
         Header.PACKET_SEQUENCE_NUMBER.set_to(arr, bytearray(packetsequencenumber))
 
         return bytes(arr)
@@ -91,7 +92,7 @@ class Header:
         return Header(messageid, packetcount, packetsequencenumber)
 
     def __str__(self) -> str:
-        return f"HEADER:\n    MessageID: {self.messageid}\n    PacketCount: {self.packetcount}\n    SequenceNumber: {self.packetsequencenumber}\n"
+        return f"HEADER:\n    MessageID: {self.messageid}\n    PacketCount: {self.packetcount}\n    SequenceNumber: {self.packetsequencenumber}"
 
 
 class PayloadType(Enum):
@@ -111,7 +112,8 @@ class PayloadType(Enum):
     def __new__(cls, value: int):
         obj = object.__new__(cls)
         obj._value_ = value
-        obj.bytes_value = value.to_bytes(length=1, byteorder='big') # MAKE SURE TO CHANGE LENGTH IF PAYLOAD_TYPE LENGTH CHANGES
+        obj.bytes_value = value.to_bytes(length=1,
+                                         byteorder='big')  # MAKE SURE TO CHANGE LENGTH IF PAYLOAD_TYPE LENGTH CHANGES
         return obj
 
     @classmethod
@@ -173,12 +175,11 @@ class Footer:
         return Footer(payloadtype, userid, unixtime)
 
     def __str__(self) -> str:
-        return f"FOOTER:\n    PayloadType: {self.payloadtype}\n    UserID: {self.userid}\n    UnixTime: {self.unixtime}\n"
-
+        return f"FOOTER:\n    PayloadType: {self.payloadtype}\n    UserID: {self.userid}\n    UnixTime: {self.unixtime}"
 
 
 class Packet:
-    MAX_PACKET_SIZE = 512
+    MAX_PACKET_SIZE = 2048
 
     def __init__(self, header: Header, payload: 'Payload', footer: Footer = None):
         self.header = header
@@ -207,9 +208,9 @@ class Packet:
 
     def __str__(self):
         if self.footer is None:
-            return self.header.__str__() + self.payload.__str__()
+            return self.header.__str__() + "\n" + self.payload.__str__()
         else:
-            return self.header.__str__() + self.payload.__str__() + self.footer.__str__()
+            return self.header.__str__() + "\n" + self.payload.__str__() + "\n" + self.footer.__str__()
 
 
 class Payload:
@@ -227,11 +228,12 @@ class Payload:
         return Payload(message)
 
     def __str__(self) -> str:
-        return f"PAYLOAD:\n    {self.message}\n"
+        return f"PAYLOAD:\n    {self.message}"
 
 
 class Message:
-    def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None, _packetcount: int = None, _unixtime=None):
+    def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None,
+                 _packetcount: int = None, _unixtime=None, sender: Tuple[str, int] = None):
         if messageid is None:  # If message id is none, assume new message and create a random id
             messageid = secrets.token_bytes(Header.MESSAGE_ID.length)
 
@@ -252,6 +254,9 @@ class Message:
         else:
             self.unixtime = _unixtime
 
+        self.sender = sender
+
+    """
     def to_bytes_list(self) -> List[bytes]:
         byteslist: List[bytes] = [None] * self.packetcount
         header = Header(self.messageid, self.packetcount, 0)
@@ -272,7 +277,29 @@ class Message:
         byteslist[self.packetcount - 1] = packet.to_bytes()
 
         return byteslist
+    """
 
+    def to_packet_list(self) -> List[Packet]:
+        packetlist: List[Packet] = [None] * self.packetcount
+        header = Header(self.messageid, self.packetcount, 0)
+
+        # CONSTRUCT MIDDLE PACKETS
+        for psn in range(self.packetcount - 1):
+            payloadstart = psn * Payload.MAX_PAYLOAD_SIZE_NO_FOOTER
+            header.packetsequencenumber = psn
+            packetlist[psn] = Packet(header, Payload(
+                self.payload[payloadstart:payloadstart + Payload.MAX_PAYLOAD_SIZE_NO_FOOTER]))
+
+        # CONSTRUCT LAST PACKET
+        header.packetsequencenumber = self.packetcount - 1
+        footer = Footer(self.payloadtype, self.userid, self.unixtime)
+        packetlist[self.packetcount - 1] = Packet(header, Payload(
+            self.payload[(self.packetcount - 1) * Payload.MAX_PAYLOAD_SIZE_NO_FOOTER:]),
+                                                  footer)
+
+        return packetlist
+
+    """
     @classmethod
     def from_bytes_list(cls, byteslist: List[bytes]) -> 'Message':
         payload = b''
@@ -283,3 +310,13 @@ class Message:
         packet = Packet.from_bytes(byteslist[count - 1])
         payload += packet.payload.to_bytes()
         return Message(payload, packet.footer.payloadtype, packet.footer.userid, packet.header.messageid, packet.header.packetcount, packet.footer.unixtime)
+    """
+
+    @classmethod
+    def from_packet_list(cls, packetlist: List[Packet], sender: Tuple[str, int] = None) -> 'Message':
+        payload = b''
+        for packet in packetlist:
+            payload += packet.payload.to_bytes()
+        footer = packetlist[-1].footer
+        header = packetlist[-1].header
+        return Message(payload, footer.payloadtype, footer.userid, header.messageid, header.packetcount, footer.unixtime, sender=sender)

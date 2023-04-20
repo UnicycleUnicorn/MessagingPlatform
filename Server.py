@@ -13,5 +13,9 @@ class Server:
         message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, 69420)
         self.handler.send_message(message, recipient)
 
+    def ack(self, mesid: bytes, recipient: Tuple[str, int]):
+        message = Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=mesid)
+        self.handler.send_message(message, recipient)
+
     def __recv__(self, message: Packet.Message):
-        self.send("SERVER RECEIVED MESSAGE", message.sender)
+        self.ack(message.messageid, message.sender)

@@ -13,9 +13,8 @@ import asyncio
 
 class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
-        self.MESSAGE_QUEUE = asyncio.Queue(maxsize=500)
+        # Create an instance of a message reconstructor
         self.MESSAGE_RECONSTRUCTOR = MessageReconstructor.MessageReconstructor()
-        self.RECONSTRUCTOR_LOCK = threading.Lock()
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,14 +22,21 @@ class NetworkHandler:
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16384)
+
+        # Set the message listener
         self.MESSAGE_LISTENER = listener
+
+        # Create a thread pool
         self.EXECUTOR = ThreadPoolExecutor(max_workers=6)
 
+        # Create the loop to handle queued items
+        self.MESSAGE_QUEUE = asyncio.Queue(maxsize=500)
         self.LOOP = asyncio.new_event_loop()
         t = threading.Thread(target=self.__looper__)
         t.daemon = True
         t.start()
 
+        # Listen for packets
         t = threading.Thread(target=self.__listen__)
         t.daemon = True
         t.start()
@@ -56,8 +62,7 @@ class NetworkHandler:
         packet = Packet.Packet.from_bytes(raw_packet)
         logwrapper.received_packet(packet)
         message: Packet.Message | None
-        with self.RECONSTRUCTOR_LOCK:
-            message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
+        message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
         if message is not None:
             logwrapper.received_message(message)
             self.MESSAGE_LISTENER(message)

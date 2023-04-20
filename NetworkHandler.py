@@ -59,9 +59,13 @@ class NetworkHandler:
         if not raw_packet:
             logging.warning("Lame Packet")
             return
+        logwrapper.__log__("BEFORE")
         packet = Packet.Packet.from_bytes(raw_packet)
+        logwrapper.__log__("AFTER")
         logwrapper.received_packet(packet)
+
         message: Packet.Message | None
+
         message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
         if message is not None:
             logwrapper.received_message(message)

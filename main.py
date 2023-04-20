@@ -20,15 +20,14 @@ print(f"IP Address: {ip_address}")
 # COMPLETED: Message IDs
 # TODO: Cross-network communication
 # COMPLETED: UDP
-# TODO: Abstract payload type (to and from bytes)
-# TODO: Make MessageReconstructor thread-safe: may be editing items at the same time right now
+# COMPLETED: Make MessageReconstructor thread-safe: may be editing items at the same time right now
 # TODO: Pull from buffer faster
 # TODO: Ensure packet not None
 
 Version = '0.0-0.0'
 
 
-RUN_AS_SERVER = False
+RUN_AS_SERVER = True
 PORT = 8888
 
 if RUN_AS_SERVER:

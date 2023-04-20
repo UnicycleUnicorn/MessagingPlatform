@@ -3,6 +3,7 @@ import time
 import math
 from typing import List, Tuple
 import random
+import logging
 
 
 class HeaderFormat:
@@ -99,8 +100,8 @@ class PayloadType(Enum):
     """
     Type / format of message in the packet:
         * CONNECT\n
-        * DISCONNECT\n
-        * HEARTBEAT\n
+        * DISCONNECT
+        * HEARTBEAT
         * CHAT
         * ACKNOWLEDGE
         * SELECTIVE_REPEAT
@@ -175,7 +176,6 @@ class Footer:
         Constructs a PacketFooter from its byte representation
         """
         arr = bytearray(footer)
-
         payloadtype = PayloadType.from_bytes(bytes(Footer.PAYLOAD_TYPE.get_from(arr)))
         userid = int.from_bytes(bytes(Footer.USER_ID.get_from(arr)), byteorder='big')
         unixtime = int.from_bytes(bytes(Footer.UNIX_TIME.get_from(arr)), byteorder='big')
@@ -205,13 +205,13 @@ class Packet:
         header = Header.from_bytes(packet[:HeaderFormat.HEADER_LENGTH])
         footer = None
         payload: bytes
+        logging.info(header.packetsequencenumber)
         if header.packetcount == header.packetsequencenumber + 1:
             footerstart = len(packet) - FooterFormat.FOOTER_LENGTH
             payload = packet[HeaderFormat.HEADER_LENGTH:footerstart]
-            footer = Footer.from_bytes(packet[footerstart:])
+            footer = Footer.from_bytes(packet[footerstart:]) #TODO: FIXXXXX
         else:
             payload = packet[HeaderFormat.HEADER_LENGTH:]
-
         return Packet(header, payload, footer)
 
     def __str__(self):
@@ -273,21 +273,16 @@ class Message:
 
     def to_packet_list(self) -> List[Packet]:
         packetlist: List[Packet] = [None] * self.packetcount
-        header = Header(self.messageid, self.packetcount, 0)
 
         # CONSTRUCT MIDDLE PACKETS
         for psn in range(self.packetcount - 1):
             payloadstart = psn * Message.MAX_PAYLOAD_SIZE_NO_FOOTER
-            header.packetsequencenumber = psn
-            packetlist[psn] = Packet(header,
+            packetlist[psn] = Packet(Header(self.messageid, self.packetcount, psn),
                                      self.payload[payloadstart:payloadstart + Message.MAX_PAYLOAD_SIZE_NO_FOOTER])
 
         # CONSTRUCT LAST PACKET
-        header.packetsequencenumber = self.packetcount - 1
-        footer = Footer(self.payloadtype, self.userid, self.unixtime)
-        packetlist[self.packetcount - 1] = Packet(header, self.payload[
-                                                          (self.packetcount - 1) * Message.MAX_PAYLOAD_SIZE_NO_FOOTER:],
-                                                  footer)
+        packetlist[self.packetcount - 1] = Packet(Header(self.messageid, self.packetcount, self.packetcount - 1), self.payload[
+                                                          (self.packetcount - 1) * Message.MAX_PAYLOAD_SIZE_NO_FOOTER:],Footer(self.payloadtype, self.userid, self.unixtime))
 
         return packetlist
 

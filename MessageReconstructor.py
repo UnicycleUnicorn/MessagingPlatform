@@ -2,7 +2,7 @@ import Packet
 from typing import OrderedDict as Od
 from typing import List, Tuple
 from collections import OrderedDict
-import threading
+import threading, logwrapper
 
 
 class MessageReconstructor:

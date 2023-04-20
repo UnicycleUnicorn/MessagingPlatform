@@ -1,14 +1,19 @@
+import logging
 import socket
+import time
+
 import Packet
 from typing import Callable, Tuple
 import threading
 import MessageReconstructor
-
+from concurrent.futures import ThreadPoolExecutor
 import logwrapper
+import asyncio
 
 
 class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
+        self.MESSAGE_QUEUE = asyncio.Queue(maxsize=500)
         self.MESSAGE_RECONSTRUCTOR = MessageReconstructor.MessageReconstructor()
         self.RECONSTRUCTOR_LOCK = threading.Lock()
         self.PORT = port
@@ -16,23 +21,38 @@ class NetworkHandler:
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.SOCKET.bind(('', self.PORT))
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16384)
         self.MESSAGE_LISTENER = listener
+        self.EXECUTOR = ThreadPoolExecutor(max_workers=6)
+
+        self.LOOP = asyncio.new_event_loop()
+        t = threading.Thread(target=self.__looper__)
+        t.daemon = True
+        t.start()
+
         t = threading.Thread(target=self.__listen__)
         t.daemon = True
         t.start()
 
+    def __looper__(self):
+        asyncio.set_event_loop(self.LOOP)
+        self.LOOP.create_task(self.__queue_consume__())
+        self.LOOP.run_forever()
+
     def __listen__(self):
         while True:
-            raw_packet, sender = self.SOCKET.recvfrom(Packet.Packet.MAX_PACKET_SIZE)
-            if not raw_packet:
-                break
-            t = threading.Thread(target=self.__received_packet__, args=(raw_packet, sender))
-            t.daemon = True
-            t.start()
+            asyncio.run_coroutine_threadsafe(self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(Packet.Packet.MAX_PACKET_SIZE)), self.LOOP)
+
+    async def __queue_consume__(self):
+        while True:
+            raw_packet, sender = await self.MESSAGE_QUEUE.get()
+            self.EXECUTOR.submit(self.__received_packet__, raw_packet, sender)
 
     def __received_packet__(self, raw_packet: bytes, sender: Tuple[str, int]):
+        if not raw_packet:
+            logging.warning("Lame Packet")
+            return
         packet = Packet.Packet.from_bytes(raw_packet)
         logwrapper.received_packet(packet)
         message: Packet.Message | None
@@ -58,5 +78,11 @@ class NetworkHandler:
             if not self.__send_packet__(packet, recipient):
                 logwrapper.failed_to_send_message(message)
                 return False
+            time.sleep(0.01)
         logwrapper.sent_message(message)
         return True
+
+    def shutdown(self):
+        self.LOOP.call_soon_threadsafe(self.LOOP.stop)
+        self.EXECUTOR.shutdown(wait=True)
+        self.SOCKET.close()

@@ -3,6 +3,7 @@ import time
 import secrets
 import math
 from typing import List, Tuple
+import random
 
 
 class HeaderFormat:
@@ -104,16 +105,16 @@ class PayloadType(Enum):
         * CHAT
     """
 
-    CONNECT = 0
-    DISCONNECT = 1
-    HEARTBEAT = 2
-    CHAT = 3
+    CONNECT = 0, False
+    DISCONNECT = 1, False
+    HEARTBEAT = 2, False
+    CHAT = 3, True
 
-    def __new__(cls, value: int):
+    def __new__(cls, value: int, should_encrypt):
         obj = object.__new__(cls)
         obj._value_ = value
-        obj.bytes_value = value.to_bytes(length=1,
-                                         byteorder='big')  # MAKE SURE TO CHANGE LENGTH IF PAYLOAD_TYPE LENGTH CHANGES
+        obj._should_encrypt_ = should_encrypt
+        obj.bytes_value = value.to_bytes(length=1, byteorder='big')  # MAKE SURE TO CHANGE LENGTH IF PAYLOAD_TYPE LENGTH CHANGES
         return obj
 
     @classmethod
@@ -125,6 +126,9 @@ class PayloadType(Enum):
 
     def to_bytes(self):
         return self.bytes_value
+
+    def should_encrypt(self):
+        return self._should_encrypt_
 
 
 class Footer:
@@ -179,7 +183,7 @@ class Footer:
 
 
 class Packet:
-    MAX_PACKET_SIZE = 2048
+    MAX_PACKET_SIZE = 982
 
     def __init__(self, header: Header, payload: 'Payload', footer: Footer = None):
         self.header = header
@@ -235,8 +239,7 @@ class Message:
     def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None,
                  _packetcount: int = None, _unixtime=None, sender: Tuple[str, int] = None):
         if messageid is None:  # If message id is none, assume new message and create a random id
-            messageid = secrets.token_bytes(Header.MESSAGE_ID.length)
-
+            messageid = random.getrandbits(8 * Header.MESSAGE_ID.LENGTH).to_bytes(length=Header.MESSAGE_ID.LENGTH, byteorder='big')
         self.messageid = messageid
         if _packetcount is None:
             self.packetcount = math.ceil(

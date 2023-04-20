@@ -10,12 +10,12 @@ class HeaderFormat:
     A formatted header object - contains information about the packet & message
     """
 
-    LENGTH = 0
+    HEADER_LENGTH = 0
 
     def __init__(self, length: int):
         self.length = length
-        self.offset = HeaderFormat.LENGTH
-        HeaderFormat.LENGTH += self.length
+        self.offset = HeaderFormat.HEADER_LENGTH
+        HeaderFormat.HEADER_LENGTH += self.length
 
     def get_from(self, arr: bytearray):
         return arr[self.offset: self.offset + self.length]
@@ -29,12 +29,12 @@ class FooterFormat:
     A formatted footer object - contains primarily metadata about the payload
     """
 
-    LENGTH = 0
+    FOOTER_LENGTH = 0
 
     def __init__(self, length: int):
         self.length = length
-        self.offset = FooterFormat.LENGTH
-        FooterFormat.LENGTH += self.length
+        self.offset = FooterFormat.FOOTER_LENGTH
+        FooterFormat.FOOTER_LENGTH += self.length
 
     def get_from(self, arr: bytearray):
         return arr[self.offset: self.offset + self.length]
@@ -65,7 +65,7 @@ class Header:
         """
         Converts this header into it's byte represented form that can be stored or sent over the network.
         """
-        arr = bytearray(b'\x00' * HeaderFormat.LENGTH)
+        arr = bytearray(b'\x00' * HeaderFormat.HEADER_LENGTH)
 
         Header.MESSAGE_ID.set_to(arr, bytearray(self.messageid))
 
@@ -157,7 +157,7 @@ class Footer:
         """
         Converts this footer into it's byte represented form that can be stored or sent over the network.
         """
-        arr = bytearray(b'\x00' * FooterFormat.LENGTH)
+        arr = bytearray(b'\x00' * FooterFormat.FOOTER_LENGTH)
 
         Footer.PAYLOAD_TYPE.set_to(arr, bytearray(self.payloadtype.to_bytes()))
 
@@ -202,15 +202,15 @@ class Packet:
 
     @classmethod
     def from_bytes(cls, packet: bytes) -> 'Packet':
-        header = Header.from_bytes(packet[:HeaderFormat.LENGTH])
+        header = Header.from_bytes(packet[:HeaderFormat.HEADER_LENGTH])
         footer = None
         payload: bytes
         if header.packetcount == header.packetsequencenumber + 1:
-            footerstart = len(packet) - FooterFormat.LENGTH
-            payload = packet[HeaderFormat.LENGTH:footerstart]
+            footerstart = len(packet) - FooterFormat.FOOTER_LENGTH
+            payload = packet[HeaderFormat.HEADER_LENGTH:footerstart]
             footer = Footer.from_bytes(packet[footerstart:])
         else:
-            payload = packet[HeaderFormat.LENGTH:]
+            payload = packet[HeaderFormat.HEADER_LENGTH:]
 
         return Packet(header, payload, footer)
 
@@ -222,7 +222,7 @@ class Packet:
 
 
 class Message:
-    MAX_PAYLOAD_SIZE_NO_FOOTER = Packet.MAX_PACKET_SIZE - HeaderFormat.LENGTH
+    MAX_PAYLOAD_SIZE_NO_FOOTER = Packet.MAX_PACKET_SIZE - HeaderFormat.HEADER_LENGTH
 
     def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None,
                  _packetcount: int = None, _unixtime=None, sender: Tuple[str, int] = None):
@@ -232,7 +232,7 @@ class Message:
         self.messageid = messageid
         if _packetcount is None:
             self.packetcount = math.ceil(
-                (len(payload) + FooterFormat.LENGTH) / (Packet.MAX_PACKET_SIZE - HeaderFormat.LENGTH))
+                (len(payload) + FooterFormat.FOOTER_LENGTH) / (Packet.MAX_PACKET_SIZE - HeaderFormat.HEADER_LENGTH))
         else:
             self.packetcount = _packetcount
 
@@ -290,6 +290,11 @@ class Message:
                                                   footer)
 
         return packetlist
+
+    def __str__(self):
+        header = f"METADATA:\n    MessageID: {self.messageid}\n    PacketCount: {self.packetcount}\n    UserID: {self.userid}\n    PayloadType: {self.payloadtype}\n    UnixTime: {self.unixtime}\n    Sender: {self.sender}"
+        payload = f"PAYLOAD:\n    Payload: {self.payload}"
+        return header + '\n' + payload
 
     """
     @classmethod

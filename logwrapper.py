@@ -18,7 +18,7 @@ def __log_packet__(packet: Packet.Packet) -> str:
 
 
 def __log_message(message: Packet.Message) -> str:
-    return message.payload.decode() + '\n'
+    return message.__str__() + '\n'
 
 
 def __start_section__(item: str) -> str:

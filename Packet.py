@@ -227,7 +227,7 @@ class Message:
     def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None,
                  _packetcount: int = None, _unixtime=None, sender: Tuple[str, int] = None):
         if messageid is None:  # If message id is none, assume new message and create a random id
-            messageid = random.getrandbits(8 * Header.MESSAGE_ID.LENGTH).to_bytes(length=Header.MESSAGE_ID.LENGTH,
+            messageid = random.getrandbits(8 * Header.MESSAGE_ID.length).to_bytes(length=Header.MESSAGE_ID.length,
                                                                                   byteorder='big')
         self.messageid = messageid
         if _packetcount is None:

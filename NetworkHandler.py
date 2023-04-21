@@ -1,13 +1,10 @@
-import logging
 import socket
-import time
-
 import Packet
 from typing import Callable, Tuple
 import threading
 import MessageReconstructor
 from concurrent.futures import ThreadPoolExecutor
-import logwrapper
+import BetterLog
 import asyncio
 from CompletedMessages import CompletedMessages
 
@@ -82,12 +79,12 @@ class NetworkHandler:
 
     def __received_packet__(self, raw_packet: bytes, sender: Tuple[str, int]):
         if not raw_packet:
-            logging.warning("Lame Packet")
+            BetterLog.log_incoming("Lame Packet")
             return
         packet = Packet.Packet.from_bytes(raw_packet)
-        logwrapper.received_packet(packet)
+        BetterLog.log_packet_received(packet)
         if packet.header.messageid in self.COMPLETED_MESSAGES:
-            logwrapper.__log__(f"RECEIVED PACKET REGARDING CLOSED MESSAGE: {packet.header.messageid}")
+            BetterLog.log_incoming(f"RECEIVED PACKET REGARDING CLOSED MESSAGE: {packet.header.messageid}")
         else:
             message: Packet.Message | None
             message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
@@ -95,7 +92,7 @@ class NetworkHandler:
                 self.__received_message__(message)
 
     def __received_message__(self, message: Packet.Message):
-        logwrapper.received_message(message)
+        BetterLog.log_message_received(message)
         messageid = message.messageid
 
         if message.payloadtype == Packet.PayloadType.CONNECT:
@@ -128,15 +125,15 @@ class NetworkHandler:
                 self.OUTGOING_TRACKER.resent(messageid)
 
         else:
-            logwrapper.__log__("How Did We Get Here?")
+            BetterLog.log_incoming("Received Packet with null Payload Type")
 
     def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
             self.SOCKET.sendto(packet, recipient)
-            logwrapper.__log__("Sent Packet")
+            BetterLog.log_packet_sent(Packet.Packet.from_bytes(packet))
             return True
-        except socket.error:
-            logwrapper.__log__("Failed to Send Packet")
+        except socket.error as e:
+            BetterLog.log_failed_packet_send(Packet.Packet.from_bytes(packet), e)
             return False
 
     def send_message(self, message: Packet.Message, recipient=None) -> bool:
@@ -147,11 +144,9 @@ class NetworkHandler:
             bytepacket = packet.to_bytes()
             sent.append(bytepacket)
             if not self.__send_packet__(bytepacket, recipient):
-                logwrapper.failed_to_send_packet(packet)
-                logwrapper.failed_to_send_message(message)
+                BetterLog.log_failed_message_send(message)
                 return False
-            logwrapper.sent_packet(packet)
-        logwrapper.sent_message(message)
+        BetterLog.log_message_sent(message)
         self.OUTGOING_TRACKER.sent(message.messageid, sent, recipient)
         return True
 

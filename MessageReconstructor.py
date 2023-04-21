@@ -4,7 +4,6 @@ from typing import List, Tuple
 from typing import OrderedDict as Od
 import time
 import Packet
-import logging
 
 
 class MessageReconstructor:

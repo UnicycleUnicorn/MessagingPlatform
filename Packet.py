@@ -3,7 +3,6 @@ import time
 import math
 from typing import List, Tuple
 import random
-import logging
 
 
 class HeaderFormat:

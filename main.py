@@ -1,11 +1,12 @@
 import Server
 import Client
 import socket
+import BetterLog
 
 hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
-print(f"Hostname: {hostname}")
-print(f"IP Address: {ip_address}")
+BetterLog.log_text(f"Hostname: {hostname}")
+BetterLog.log_text(f"IP Address: {ip_address}")
 
 # TODO: tor / i2p
 # TODO: GUI

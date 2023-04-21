@@ -2,6 +2,7 @@
     <head>
         <script type="text/javascript" src="/eel.js"></script>
         <script type="text/javascript">
+            eel.expose(add_log_message);
             function add_log_message(message) {
                 var log_element = document.getElementById('log');
                 var new_element = document.createElement('pre');
@@ -9,6 +10,8 @@
                 new_element.textContent = message;
                 log_element.appendChild(new_element);
             }
+
+            eel.expose(add_outgoing_message);
             function add_outgoing_message(message) {
                 var log_element = document.getElementById('log');
                 var new_element = document.createElement('pre');
@@ -16,6 +19,8 @@
                 new_element.textContent = message;
                 log_element.appendChild(new_element);
             }
+
+            eel.expose(add_incoming_message);
             function add_incoming_message(message) {
                 var log_element = document.getElementById('log');
                 var new_element = document.createElement('pre');
@@ -30,7 +35,7 @@
             }
 
             .message {
-                color: black;
+                color: white;
             }
             .outgoing {
                 color: green;
@@ -38,11 +43,11 @@
             .incoming {
                 color: blue;
             }
+            body {
+                background-color: black;
+            }
         </style>
     </head>
-    <body>
-        <div id="log">
-
-        </div>
+    <body id='log'>
     </body>
 </html>

@@ -1,6 +1,5 @@
 import Packet
 import NetworkHandler
-import logging
 
 
 class Client:

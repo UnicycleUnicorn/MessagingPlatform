@@ -94,7 +94,8 @@ class NetworkHandler:
                 self.__received_message__(message)
 
     def sendACK(self, messageid: bytes, recipient: Tuple[str, int]):
-        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient)
+        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient, should_track=False)
+        self.OUTGOING_TRACKER.close(messageid)
 
     def __received_message__(self, message: Packet.Message):
         BetterLog.log_message_received(message)
@@ -142,7 +143,7 @@ class NetworkHandler:
             BetterLog.log_failed_packet_send_bytes(packet, e)
             return False
 
-    def send_message(self, message: Packet.Message, recipient=None) -> bool:
+    def send_message(self, message: Packet.Message, recipient=None, should_track = True) -> bool:
         if recipient is None:
             recipient = (self.HOST, self.PORT)
         sent = []
@@ -153,7 +154,8 @@ class NetworkHandler:
                 BetterLog.log_failed_message_send(message)
                 return False
         BetterLog.log_message_sent(message)
-        self.OUTGOING_TRACKER.sent(message.messageid, sent, recipient)
+        if should_track:
+            self.OUTGOING_TRACKER.sent(message.messageid, sent, recipient)
         return True
 
     def shutdown(self):

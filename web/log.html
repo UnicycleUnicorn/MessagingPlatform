@@ -28,10 +28,20 @@
                 new_element.textContent = message;
                 log_element.appendChild(new_element);
             }
+
+            function clearlog() {
+                var log_element = document.getElementById('log');
+                while (log_element.firstChild) {
+                    log_element.removeChild(log_element.firstChild);
+                }
+            }
         </script>
         <style>
             .logitem {
-                margin: 20px;
+                margin: 25px;
+                padding: 10px;
+                background-color: #1F2022;
+                white-space: pre-wrap;
             }
 
             .message {
@@ -46,8 +56,15 @@
             body {
                 background-color: black;
             }
+            #clear-button {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+            }
         </style>
     </head>
-    <body id='log'>
+    <body>
+        <div  id='log'></div>
+        <button id="clear-button" onclick="clearlog()">Clear Log</button>
     </body>
 </html>

@@ -9,6 +9,7 @@ import MessageReconstructor
 from concurrent.futures import ThreadPoolExecutor
 import logwrapper
 import asyncio
+from CompletedMessages import CompletedMessages
 
 from OutgoingTracker import OutgoingTracker
 
@@ -24,6 +25,9 @@ class NetworkHandler:
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16384)
+
+        # Track Completed Messages
+        self.COMPLETED_MESSAGES = CompletedMessages(1000)
 
         # Packet status checkers
         self.__incoming_status_checker()
@@ -82,13 +86,18 @@ class NetworkHandler:
             return
         packet = Packet.Packet.from_bytes(raw_packet)
         logwrapper.received_packet(packet)
-        message: Packet.Message | None
-        message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
-        if message is not None:
-            self.__received_message__(message)
+        if packet.header.messageid in self.COMPLETED_MESSAGES:
+            logwrapper.__log__(f"RECEIVED PACKET REGARDING CLOSED MESSAGE: {packet.header.messageid}")
+        else:
+            message: Packet.Message | None
+            message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
+            if message is not None:
+                self.__received_message__(message)
 
     def __received_message__(self, message: Packet.Message):
         logwrapper.received_message(message)
+        messageid = message.messageid
+
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
             pass
@@ -107,15 +116,16 @@ class NetworkHandler:
 
         elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
             # ACKNOWLEDGE
-            self.OUTGOING_TRACKER.close(message.messageid)
+            self.OUTGOING_TRACKER.close(messageid)
+            self.COMPLETED_MESSAGES.add(messageid)
 
         elif message.payloadtype == Packet.PayloadType.SELECTIVE_REPEAT:
             # SELECTIVE REPEAT
-            packets = self.OUTGOING_TRACKER.get_packets(message.messageid, list(message.payload))
+            packets = self.OUTGOING_TRACKER.get_packets(messageid, list(message.payload))
             if packets is not None:
                 for p in packets:
                     self.__send_packet__(p, message.sender)
-                self.OUTGOING_TRACKER.resent(message.messageid)
+                self.OUTGOING_TRACKER.resent(messageid)
 
         else:
             logwrapper.__log__("How Did We Get Here?")
@@ -123,8 +133,10 @@ class NetworkHandler:
     def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
             self.SOCKET.sendto(packet, recipient)
+            logwrapper.__log__("Sent Packet")
             return True
         except socket.error:
+            logwrapper.__log__("Failed to Send Packet")
             return False
 
     def send_message(self, message: Packet.Message, recipient=None) -> bool:

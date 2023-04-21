@@ -1,3 +1,4 @@
+"""
 from CryptWrapper import CryptWrapper
 
 
@@ -16,4 +17,5 @@ ciphertext = CryptWrapper.encrypt(s_aes_gcm, message)
 print(ciphertext)
 plaintext = CryptWrapper.decrypt(o_aes_gcm, ciphertext)
 print(plaintext)
-
+"""
+print(list(b' !"%&\'*,-'))

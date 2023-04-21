@@ -62,11 +62,11 @@ class MessageReconstructor:
     def __new_dictionary_entry__(self, packet: Packet, sender: Tuple[str, int]):
         reconlist = [None] * packet.header.packetcount
         reconlist[packet.header.packetsequencenumber] = packet
-        self.recondict[packet.header.messageid] = [reconlist, sender,
-                                                   MessageReconstructor.create_response_time(50000000)]
+        self.recondict[packet.header.messageid] = [reconlist, sender, MessageReconstructor.create_response_time(50000000)]
 
     def __old_dictionary_entry__(self, packet: Packet) -> List[Packet.Packet] | None:
         reconlist = self.recondict[packet.header.messageid][0]
+        self.recondict[packet.header.messageid][2] = MessageReconstructor.create_response_time(50000000)
         reconlist[packet.header.packetsequencenumber] = packet
         if None in reconlist:
             return None

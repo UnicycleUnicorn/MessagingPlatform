@@ -94,30 +94,28 @@ class NetworkHandler:
                 self.__received_message__(message)
 
     def sendACK(self, messageid: bytes, recipient: Tuple[str, int]):
-        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid))
+        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient)
 
     def __received_message__(self, message: Packet.Message):
         BetterLog.log_message_received(message)
         messageid: bytes = message.messageid
         sender: Tuple[str, int] = message.sender
-
-        self.sendACK(messageid, sender)
-
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
-            pass
+            self.sendACK(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.DISCONNECT:
             # DISCONNECT
-            pass
+            self.sendACK(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.HEARTBEAT:
             # HEARTBEAT
-            pass
+            self.sendACK(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.CHAT:
             # CHAT
             self.MESSAGE_LISTENER(message)
+            self.sendACK(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
             # ACKNOWLEDGE

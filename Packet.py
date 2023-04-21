@@ -4,6 +4,8 @@ import math
 from typing import List, Tuple
 import random
 
+import NetworkCommunicationConstants
+
 
 class HeaderFormat:
     """
@@ -186,8 +188,6 @@ class Footer:
 
 
 class Packet:
-    MAX_PACKET_SIZE = 982
-
     def __init__(self, header: Header, payload: bytes, footer: Footer = None):
         self.header = header
         self.payload = payload
@@ -220,7 +220,7 @@ class Packet:
 
 
 class Message:
-    MAX_PAYLOAD_SIZE_NO_FOOTER = Packet.MAX_PACKET_SIZE - HeaderFormat.HEADER_LENGTH
+    MAX_PAYLOAD_SIZE_NO_FOOTER = NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES - HeaderFormat.HEADER_LENGTH
 
     def __init__(self, payload: bytes, payloadtype: PayloadType, userid: int, messageid: bytes = None,
                  _packetcount: int = None, _unixtime=None, sender: Tuple[str, int] = None):
@@ -230,7 +230,7 @@ class Message:
         self.messageid = messageid
         if _packetcount is None:
             self.packetcount = math.ceil(
-                (len(payload) + FooterFormat.FOOTER_LENGTH) / (Packet.MAX_PACKET_SIZE - HeaderFormat.HEADER_LENGTH))
+                (len(payload) + FooterFormat.FOOTER_LENGTH) / (NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES - HeaderFormat.HEADER_LENGTH))
         else:
             self.packetcount = _packetcount
 
@@ -270,7 +270,7 @@ class Message:
     """
 
     def to_packet_list(self) -> List[Packet]:
-        packetlist: List[Packet] = [None] * self.packetcount
+        packetlist: List[Packet] | List[None] = [None] * self.packetcount
 
         # CONSTRUCT MIDDLE PACKETS
         for psn in range(self.packetcount - 1):

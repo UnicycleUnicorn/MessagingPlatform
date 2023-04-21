@@ -3,6 +3,8 @@ from collections import OrderedDict
 from typing import List, Tuple
 from typing import OrderedDict as Od
 import time
+
+import NetworkCommunicationConstants
 import Packet
 
 
@@ -61,11 +63,11 @@ class MessageReconstructor:
     def __new_dictionary_entry__(self, packet: Packet, sender: Tuple[str, int]):
         reconlist = [None] * packet.header.packetcount
         reconlist[packet.header.packetsequencenumber] = packet
-        self.recondict[packet.header.messageid] = [reconlist, sender, MessageReconstructor.create_response_time(50000000)]
+        self.recondict[packet.header.messageid] = [reconlist, sender, MessageReconstructor.create_response_time(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_NS)]
 
     def __old_dictionary_entry__(self, packet: Packet) -> List[Packet.Packet] | None:
         reconlist = self.recondict[packet.header.messageid][0]
-        self.recondict[packet.header.messageid][2] = MessageReconstructor.create_response_time(50000000)
+        self.recondict[packet.header.messageid][2] = MessageReconstructor.create_response_time(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_NS)
         reconlist[packet.header.packetsequencenumber] = packet
         if None in reconlist:
             return None

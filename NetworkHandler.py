@@ -1,4 +1,6 @@
 import socket
+
+import NetworkCommunicationConstants
 import Packet
 from typing import Callable, Tuple
 import threading
@@ -20,11 +22,11 @@ class NetworkHandler:
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.SOCKET.bind(('', self.PORT))
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16384)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, NetworkCommunicationConstants.OUTGOING_BUFFER_SIZE_BYTES)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, NetworkCommunicationConstants.INCOMING_BUFFER_SIZE_BYTES)
 
         # Track Completed Messages
-        self.COMPLETED_MESSAGES = CompletedMessages(1000)
+        self.COMPLETED_MESSAGES = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
 
         # Packet status checkers
         self.__incoming_status_checker()
@@ -55,22 +57,22 @@ class NetworkHandler:
         self.LOOP.run_forever()
 
     def __outgoing_status_checker(self):
-        status_checker = threading.Timer(0.05, self.__outgoing_status_checker)
+        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_S, self.__outgoing_status_checker)
         status_checker.start()
 
     def __incoming_status_checker(self):
         missings = self.MESSAGE_RECONSTRUCTOR.look_for_missing_packets()
         for missing in missings:
             packets, messageid, sender = missing
-            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid, 75000000):
+            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
                 message = Packet.Message(bytes(packets), Packet.PayloadType.SELECTIVE_REPEAT, 69420, messageid)
                 self.send_message(message, sender)
-        status_checker = threading.Timer(0.05, self.__incoming_status_checker)
+        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_S, self.__incoming_status_checker)
         status_checker.start()
 
     def __listen__(self):
         while True:
-            asyncio.run_coroutine_threadsafe(self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(Packet.Packet.MAX_PACKET_SIZE)), self.LOOP)
+            asyncio.run_coroutine_threadsafe(self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES)), self.LOOP)
 
     async def __queue_consume__(self):
         while True:
@@ -130,10 +132,10 @@ class NetworkHandler:
     def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
             self.SOCKET.sendto(packet, recipient)
-            BetterLog.log_packet_sent(Packet.Packet.from_bytes(packet))
+            BetterLog.log_packet_sent_bytes(packet)
             return True
         except socket.error as e:
-            BetterLog.log_failed_packet_send(Packet.Packet.from_bytes(packet), e)
+            BetterLog.log_failed_packet_send_bytes(packet, e)
             return False
 
     def send_message(self, message: Packet.Message, recipient=None) -> bool:

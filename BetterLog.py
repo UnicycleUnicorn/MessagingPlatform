@@ -44,10 +44,14 @@ def log_packet_sent(packet: Packet):
 def log_message_sent(message: Message):
     log_outgoing(message.__str__())
 
+def log_packet_sent_bytes(packet: bytes):
+    log_packet_sent(Packet.from_bytes(packet))
+
+def log_failed_packet_send_bytes(packet: bytes, e: Exception):
+    log_failed_packet_send(Packet.from_bytes(packet), e)
 
 def log_failed_message_send(message: Message):
     log_outgoing(f"FAILED TO SEND\n{message.__str__()}")
-
 
 def log_failed_packet_send(packet: Packet, e: Exception):
     log_outgoing(f"FAILED TO SEND\n{packet.__str__()}\n{e}")

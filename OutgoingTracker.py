@@ -4,6 +4,8 @@ from collections import OrderedDict
 from typing import OrderedDict as Od
 from typing import List, Tuple
 
+import NetworkCommunicationConstants
+
 
 class OutgoingTracker:
     def __init__(self):
@@ -39,7 +41,7 @@ class OutgoingTracker:
             self.lock.release()
             return None
 
-    def resent(self, messageid: bytes, nanoseconds: int = 75000000) -> bool:
+    def resent(self, messageid: bytes, nanoseconds: int = NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS) -> bool:
         self.lock.acquire()
         if self.__in_dictionary__(messageid):
             self.lock.release()

@@ -28,7 +28,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 Version = '0.0-0.0'
 
 
-RUN_AS_SERVER = False
+RUN_AS_SERVER = True
 PORT = 8888
 
 if RUN_AS_SERVER:

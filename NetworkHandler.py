@@ -93,9 +93,15 @@ class NetworkHandler:
             if message is not None:
                 self.__received_message__(message)
 
+    def sendACK(self, messageid: bytes, recipient: Tuple[str, int]):
+        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid))
+
     def __received_message__(self, message: Packet.Message):
         BetterLog.log_message_received(message)
-        messageid = message.messageid
+        messageid: bytes = message.messageid
+        sender: Tuple[str, int] = message.sender
+
+        self.sendACK(messageid, sender)
 
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
@@ -123,7 +129,7 @@ class NetworkHandler:
             packets = self.OUTGOING_TRACKER.get_packets(messageid, list(message.payload))
             if packets is not None:
                 for p in packets:
-                    self.__send_packet__(p, message.sender)
+                    self.__send_packet__(p, sender)
                 self.OUTGOING_TRACKER.resent(messageid)
 
         else:

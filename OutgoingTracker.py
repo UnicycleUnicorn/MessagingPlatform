@@ -4,6 +4,7 @@ from collections import OrderedDict
 from typing import OrderedDict as Od
 from typing import List, Tuple
 
+import BetterLog
 import NetworkCommunicationConstants
 
 
@@ -20,6 +21,7 @@ class OutgoingTracker:
         self.lock.acquire()
         self.sentdictionary.pop(messageid, None)
         self.lock.release()
+        BetterLog.log_text(f"CLOSED MESSAGE: {messageid}")
 
     def sent(self, messageid: bytes, packets: List[bytes], recipient: Tuple[str, int]) -> bool:
         self.lock.acquire()
@@ -28,6 +30,7 @@ class OutgoingTracker:
             return False
         self.sentdictionary[messageid] = [packets, recipient, OutgoingTracker.create_resend_time(75000000)]
         self.lock.release()
+        BetterLog.log_text(f"STARTED MESSAGE: {messageid}")
         return True
 
     def get_packets(self, messageid: bytes, packets: List[int]) -> List[bytes] | None:

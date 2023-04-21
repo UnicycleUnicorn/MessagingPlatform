@@ -28,7 +28,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 Version = '0.0-0.0'
 
 
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 PORT = 8888
 
 if RUN_AS_SERVER:
@@ -49,6 +49,12 @@ else:
         if message == "file":
             file = open("file.txt", "r")
             message = file.read()
+            file.close()
+        if message == "filex":
+            num = input('Enter a quantity: ')
+            file = open("file.txt", "r")
+            message = file.read()
+            message *= int(num)
             file.close()
 
         client.send(message)

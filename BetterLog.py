@@ -29,7 +29,6 @@ thread = threading.Thread(target=eel.start, args=('log.html',))
 thread.daemon = True
 thread.start()
 
-
 def log_packet_received(packet: Packet):
     log_incoming(packet.__str__())
 

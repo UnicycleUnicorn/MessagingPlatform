@@ -205,11 +205,10 @@ class Packet:
         header = Header.from_bytes(packet[:HeaderFormat.HEADER_LENGTH])
         footer = None
         payload: bytes
-        logging.info(header.packetsequencenumber)
         if header.packetcount == header.packetsequencenumber + 1:
             footerstart = len(packet) - FooterFormat.FOOTER_LENGTH
             payload = packet[HeaderFormat.HEADER_LENGTH:footerstart]
-            footer = Footer.from_bytes(packet[footerstart:]) #TODO: FIXXXXX
+            footer = Footer.from_bytes(packet[footerstart:])
         else:
             payload = packet[HeaderFormat.HEADER_LENGTH:]
         return Packet(header, payload, footer)

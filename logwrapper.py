@@ -34,9 +34,9 @@ def sent_packet(packet: Packet.Packet):
     __log__(s + __log_packet__(packet) + __end_section__(len(s)))
 
 
-def failed_to_send_packet(packet: Packet.Packet, e: Exception):
+def failed_to_send_packet(packet: Packet.Packet):
     s = __start_section__("FAILED TO SEND PACKET")
-    __log__(s + __log_packet__(packet) + f"{e}\n" + __end_section__(len(s)))
+    __log__(s + __log_packet__(packet) + __end_section__(len(s)))
 
 
 def received_packet(packet: Packet.Packet):

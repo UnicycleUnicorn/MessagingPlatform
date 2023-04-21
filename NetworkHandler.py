@@ -10,6 +10,8 @@ from concurrent.futures import ThreadPoolExecutor
 import logwrapper
 import asyncio
 
+from OutgoingTracker import OutgoingTracker
+
 
 class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
@@ -22,6 +24,11 @@ class NetworkHandler:
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 16384)
+
+        # Packet status checkers
+        self.__incoming_status_checker()
+        self.__outgoing_status_checker()
+        self.OUTGOING_TRACKER = OutgoingTracker()
 
         # Set the message listener
         self.MESSAGE_LISTENER = listener
@@ -46,6 +53,20 @@ class NetworkHandler:
         self.LOOP.create_task(self.__queue_consume__())
         self.LOOP.run_forever()
 
+    def __outgoing_status_checker(self):
+        status_checker = threading.Timer(0.05, self.__outgoing_status_checker)
+        status_checker.start()
+
+    def __incoming_status_checker(self):
+        missings = self.MESSAGE_RECONSTRUCTOR.look_for_missing_packets()
+        for missing in missings:
+            packets, messageid, sender = missing
+            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid, 75000000):
+                message = Packet.Message(bytes(packets), Packet.PayloadType.SELECTIVE_REPEAT, 69420, messageid)
+                self.send_message(message, sender)
+        status_checker = threading.Timer(0.05, self.__incoming_status_checker)
+        status_checker.start()
+
     def __listen__(self):
         while True:
             asyncio.run_coroutine_threadsafe(self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(Packet.Packet.MAX_PACKET_SIZE)), self.LOOP)
@@ -59,36 +80,67 @@ class NetworkHandler:
         if not raw_packet:
             logging.warning("Lame Packet")
             return
-        logwrapper.__log__("BEFORE")
         packet = Packet.Packet.from_bytes(raw_packet)
-        logwrapper.__log__("AFTER")
         logwrapper.received_packet(packet)
-
         message: Packet.Message | None
-
         message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
         if message is not None:
-            logwrapper.received_message(message)
+            self.__received_message__(message)
+
+    def __received_message__(self, message: Packet.Message):
+        logwrapper.received_message(message)
+        if message.payloadtype == Packet.PayloadType.CONNECT:
+            # CONNECT
+            pass
+
+        elif message.payloadtype == Packet.PayloadType.DISCONNECT:
+            # DISCONNECT
+            pass
+
+        elif message.payloadtype == Packet.PayloadType.HEARTBEAT:
+            # HEARTBEAT
+            pass
+
+        elif message.payloadtype == Packet.PayloadType.CHAT:
+            # CHAT
             self.MESSAGE_LISTENER(message)
 
-    def __send_packet__(self, packet: Packet.Packet, recipient=None) -> bool:
-        if recipient is None:
-            recipient = (self.HOST, self.PORT)
+        elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
+            # ACKNOWLEDGE
+            self.OUTGOING_TRACKER.close(message.messageid)
+
+        elif message.payloadtype == Packet.PayloadType.SELECTIVE_REPEAT:
+            # SELECTIVE REPEAT
+            packets = self.OUTGOING_TRACKER.get_packets(message.messageid, list(message.payload))
+            if packets is not None:
+                for p in packets:
+                    self.__send_packet__(p, message.sender)
+                self.OUTGOING_TRACKER.resent(message.messageid)
+
+        else:
+            logwrapper.__log__("How Did We Get Here?")
+
+    def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
-            self.SOCKET.sendto(packet.to_bytes(), recipient)
-            logwrapper.sent_packet(packet)
+            self.SOCKET.sendto(packet, recipient)
             return True
-        except socket.error as e:
-            logwrapper.failed_to_send_packet(packet, e)
+        except socket.error:
             return False
 
-    def send_message(self, message: Packet.Message, recipient=None):
+    def send_message(self, message: Packet.Message, recipient=None) -> bool:
+        if recipient is None:
+            recipient = (self.HOST, self.PORT)
+        sent = []
         for packet in message.to_packet_list():
-            if not self.__send_packet__(packet, recipient):
+            bytepacket = packet.to_bytes()
+            sent.append(bytepacket)
+            if not self.__send_packet__(bytepacket, recipient):
+                logwrapper.failed_to_send_packet(packet)
                 logwrapper.failed_to_send_message(message)
                 return False
-            time.sleep(0.01)
+            logwrapper.sent_packet(packet)
         logwrapper.sent_message(message)
+        self.OUTGOING_TRACKER.sent(message.messageid, sent, recipient)
         return True
 
     def shutdown(self):

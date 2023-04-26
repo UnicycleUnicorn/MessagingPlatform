@@ -59,7 +59,10 @@ class NetworkHandler:
         self.LOOP.run_forever()
 
     def __outgoing_status_checker(self):
-        resends = self.OUTGOING_TRACKER.find_resends()
+        resends, failed = self.OUTGOING_TRACKER.find_resends()
+        for fail in failed:
+            BetterLog.log_text(f"Failed to send too many times: {fail}")
+            self.OUTGOING_TRACKER.close(fail)
         for resend in resends:
             messageid, packets, recipient = resend
             if self.OUTGOING_TRACKER.resent(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):

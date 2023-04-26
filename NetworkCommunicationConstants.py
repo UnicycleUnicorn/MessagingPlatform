@@ -32,3 +32,6 @@ WAIT_TIME_BEFORE_REPEAT_REQUEST_S: float = ns_to_s(WAIT_TIME_BEFORE_REPEAT_REQUE
 WAIT_RESPONSE_TIME_NS: int = 75_000_000
 ''' Time (ns) waited for response before resending a message '''
 WAIT_RESPONSE_TIME_S: float = ns_to_s(WAIT_RESPONSE_TIME_NS)
+
+GIVE_UP_REATTEMPTS: int = 3
+''' Attempts before giving up (int) '''

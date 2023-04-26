@@ -11,7 +11,7 @@ import NetworkCommunicationConstants
 class OutgoingTracker:
     def __init__(self):
         self.lock = threading.Lock()
-        self.sentdictionary: Od[bytes, List[List[bytes], Tuple[str, int], int, None | List[int]]] = OrderedDict()
+        self.sentdictionary: Od[bytes, List[List[bytes], Tuple[str, int], int, None | List[int], int]] = OrderedDict()
 
     @staticmethod
     def create_resend_time(nanoseconds: int) -> int:
@@ -28,7 +28,7 @@ class OutgoingTracker:
         if self.__in_dictionary__(messageid):
             self.lock.release()
             return False
-        self.sentdictionary[messageid] = [packets, recipient, OutgoingTracker.create_resend_time(75000000), None]
+        self.sentdictionary[messageid] = [packets, recipient, OutgoingTracker.create_resend_time(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS), None, 0]
         self.lock.release()
         BetterLog.log_text(f"STARTED MESSAGE: {messageid}")
         return True
@@ -51,22 +51,27 @@ class OutgoingTracker:
             self.lock.release()
             return False
         self.sentdictionary[messageid][2] = OutgoingTracker.create_resend_time(nanoseconds)
+        self.sentdictionary[messageid][4] += 1
         self.lock.release()
         return True
 
-    def find_resends(self) -> List[Tuple[bytes, List[bytes], Tuple[str, int]]]:
+    def find_resends(self) -> Tuple[List[Tuple[bytes, List[bytes], Tuple[str, int]]], List[bytes]]:
         self.lock.acquire()
         current = time.time_ns()
+        failed: List[bytes] = []
         missing: List[Tuple[bytes, List[bytes], Tuple[str, int]]] = []
         for messageid, value in self.sentdictionary.items():
-            packets, recipient, t, packetlist = value
-            if t < current:
-                if packetlist is None:
-                    missing.append((messageid, packets, recipient))
-                else:
-                    missing.append((messageid, [packets[i] for i in packetlist], recipient))
+            packets, recipient, t, packetlist, attempts = value
+            if attempts <= NetworkCommunicationConstants.GIVE_UP_REATTEMPTS:
+                if t < current:
+                    if packetlist is None:
+                        missing.append((messageid, packets, recipient))
+                    else:
+                        missing.append((messageid, [packets[i] for i in packetlist], recipient))
+            else:
+                failed.append(messageid)
         self.lock.release()
-        return missing
+        return missing, failed
 
     def __in_dictionary__(self, messageid: bytes) -> bool:
         return messageid in self.sentdictionary

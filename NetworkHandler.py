@@ -22,8 +22,10 @@ class NetworkHandler:
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.SOCKET.bind(('', self.PORT))
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, NetworkCommunicationConstants.OUTGOING_BUFFER_SIZE_BYTES)
-        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, NetworkCommunicationConstants.INCOMING_BUFFER_SIZE_BYTES)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF,
+                               NetworkCommunicationConstants.OUTGOING_BUFFER_SIZE_BYTES)
+        self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
+                               NetworkCommunicationConstants.INCOMING_BUFFER_SIZE_BYTES)
 
         # Track Completed Messages
         self.COMPLETED_MESSAGES = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
@@ -57,22 +59,32 @@ class NetworkHandler:
         self.LOOP.run_forever()
 
     def __outgoing_status_checker(self):
+        resends = self.OUTGOING_TRACKER.find_resends()
+        for resend in resends:
+            messageid, packets, recipient = resend
+            if self.OUTGOING_TRACKER.resent(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
+                for packet in packets:
+                    self.__send_packet__(packet, recipient)
         status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_S, self.__outgoing_status_checker)
         status_checker.start()
 
     def __incoming_status_checker(self):
-        missings = self.MESSAGE_RECONSTRUCTOR.look_for_missing_packets()
-        for missing in missings:
+        missing_packets = self.MESSAGE_RECONSTRUCTOR.look_for_missing_packets()
+        for missing in missing_packets:
             packets, messageid, sender = missing
-            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
+            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid,
+                                                             NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
                 message = Packet.Message(bytes(packets), Packet.PayloadType.SELECTIVE_REPEAT, 69420, messageid)
                 self.send_message(message, sender)
-        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_S, self.__incoming_status_checker)
+        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_S,
+                                         self.__incoming_status_checker)
         status_checker.start()
 
     def __listen__(self):
         while True:
-            asyncio.run_coroutine_threadsafe(self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES)), self.LOOP)
+            asyncio.run_coroutine_threadsafe(
+                self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES)),
+                self.LOOP)
 
     async def __queue_consume__(self):
         while True:
@@ -93,8 +105,9 @@ class NetworkHandler:
             if message is not None:
                 self.__received_message__(message)
 
-    def sendACK(self, messageid: bytes, recipient: Tuple[str, int]):
-        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient, should_track=False)
+    def send_ack(self, messageid: bytes, recipient: Tuple[str, int]):
+        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient,
+                          should_track=False)
         self.OUTGOING_TRACKER.close(messageid)
 
     def __received_message__(self, message: Packet.Message):
@@ -103,20 +116,20 @@ class NetworkHandler:
         sender: Tuple[str, int] = message.sender
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
-            self.sendACK(messageid, sender)
+            self.send_ack(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.DISCONNECT:
             # DISCONNECT
-            self.sendACK(messageid, sender)
+            self.send_ack(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.HEARTBEAT:
             # HEARTBEAT
-            self.sendACK(messageid, sender)
+            self.send_ack(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.CHAT:
             # CHAT
             self.MESSAGE_LISTENER(message)
-            self.sendACK(messageid, sender)
+            self.send_ack(messageid, sender)
 
         elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
             # ACKNOWLEDGE
@@ -143,7 +156,7 @@ class NetworkHandler:
             BetterLog.log_failed_packet_send_bytes(packet, e)
             return False
 
-    def send_message(self, message: Packet.Message, recipient=None, should_track = True) -> bool:
+    def send_message(self, message: Packet.Message, recipient=None, should_track=True) -> bool:
         if recipient is None:
             recipient = (self.HOST, self.PORT)
         sent = []

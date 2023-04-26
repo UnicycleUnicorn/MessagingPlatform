@@ -31,9 +31,9 @@ class NetworkHandler:
         self.COMPLETED_MESSAGES = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
 
         # Packet status checkers
+        self.OUTGOING_TRACKER = OutgoingTracker()
         self.__incoming_status_checker()
         self.__outgoing_status_checker()
-        self.OUTGOING_TRACKER = OutgoingTracker()
 
         # Set the message listener
         self.MESSAGE_LISTENER = listener

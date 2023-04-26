@@ -4,6 +4,7 @@ from typing import List, Tuple
 from typing import OrderedDict as Od
 import time
 
+import BetterLog
 import NetworkCommunicationConstants
 import Packet
 
@@ -29,6 +30,20 @@ class MessageReconstructor:
                 self.__new_dictionary_entry__(packet, sender)
                 self.lock.release()
                 return None
+
+    def force_close_message(self, messageid: bytes) -> bool:
+        self.lock.acquire()
+        if messageid in self.recondict:
+            self.recondict.pop(messageid, None)
+            BetterLog.log_text(f"Force closed message: {messageid}")
+            self.lock.release()
+            return True
+        else:
+            self.lock.release()
+            return False
+
+
+
 
     @staticmethod
     def create_response_time(nanoseconds: int) -> int:

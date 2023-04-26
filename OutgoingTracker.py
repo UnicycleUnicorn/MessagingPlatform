@@ -45,13 +45,16 @@ class OutgoingTracker:
             self.lock.release()
             return None
 
-    def resent(self, messageid: bytes, nanoseconds: int = NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS) -> bool:
+    def resent(self, messageid: bytes, nanoseconds: int = NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS, resettracker: bool = False) -> bool:
         self.lock.acquire()
         if not self.__in_dictionary__(messageid):
             self.lock.release()
             return False
         self.sentdictionary[messageid][2] = OutgoingTracker.create_resend_time(nanoseconds)
-        self.sentdictionary[messageid][4] += 1
+        if resettracker:
+            self.sentdictionary[messageid][4] = 0
+        else:
+            self.sentdictionary[messageid][4] += 1
         self.lock.release()
         return True
 
@@ -62,7 +65,7 @@ class OutgoingTracker:
         missing: List[Tuple[bytes, List[bytes], Tuple[str, int]]] = []
         for messageid, value in self.sentdictionary.items():
             packets, recipient, t, packetlist, attempts = value
-            if attempts <= NetworkCommunicationConstants.GIVE_UP_REATTEMPTS:
+            if attempts < NetworkCommunicationConstants.GIVE_UP_REATTEMPTS:
                 if t < current:
                     if packetlist is None:
                         missing.append((messageid, packets, recipient))

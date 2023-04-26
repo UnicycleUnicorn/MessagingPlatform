@@ -63,9 +63,10 @@ class NetworkHandler:
         for fail in failed:
             BetterLog.log_text(f"Failed to send too many times: {fail}")
             self.OUTGOING_TRACKER.close(fail)
+            self.MESSAGE_RECONSTRUCTOR.force_close_message(fail)
         for resend in resends:
             messageid, packets, recipient = resend
-            if self.OUTGOING_TRACKER.resent(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
+            if self.OUTGOING_TRACKER.resent(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS, resettracker=False):
                 for packet in packets:
                     self.__send_packet__(packet, recipient)
         status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_S, self.__outgoing_status_checker)
@@ -133,6 +134,7 @@ class NetworkHandler:
             # CHAT
             self.MESSAGE_LISTENER(message)
             self.send_ack(messageid, sender)
+            pass
 
         elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
             # ACKNOWLEDGE
@@ -145,7 +147,7 @@ class NetworkHandler:
             if packets is not None:
                 for p in packets:
                     self.__send_packet__(p, sender)
-                self.OUTGOING_TRACKER.resent(messageid)
+                self.OUTGOING_TRACKER.resent(messageid, resettracker=True)
 
         else:
             BetterLog.log_incoming("Received Packet with null Payload Type")

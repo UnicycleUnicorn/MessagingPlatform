@@ -11,7 +11,7 @@ import NetworkCommunicationConstants
 class OutgoingTracker:
     def __init__(self):
         self.lock = threading.Lock()
-        self.sentdictionary: Od[bytes, List[List[bytes], Tuple[str, int], int], None | List[int]] = OrderedDict()
+        self.sentdictionary: Od[bytes, List[List[bytes], Tuple[str, int], int, None | List[int]]] = OrderedDict()
 
     @staticmethod
     def create_resend_time(nanoseconds: int) -> int:
@@ -61,8 +61,10 @@ class OutgoingTracker:
         for messageid, value in self.sentdictionary.items():
             packets, recipient, t, packetlist = value
             if t < current:
-                resends = [packets[i] for i in packetlist]
-                missing.append((messageid, resends, recipient))
+                if packetlist is None:
+                    missing.append((messageid, packets, recipient))
+                else:
+                    missing.append((messageid, [packets[i] for i in packetlist], recipient))
         self.lock.release()
         return missing
 

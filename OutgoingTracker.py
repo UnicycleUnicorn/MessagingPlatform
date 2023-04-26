@@ -47,7 +47,7 @@ class OutgoingTracker:
 
     def resent(self, messageid: bytes, nanoseconds: int = NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS) -> bool:
         self.lock.acquire()
-        if self.__in_dictionary__(messageid):
+        if not self.__in_dictionary__(messageid):
             self.lock.release()
             return False
         self.sentdictionary[messageid][2] = OutgoingTracker.create_resend_time(nanoseconds)

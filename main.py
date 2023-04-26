@@ -2,6 +2,7 @@ import Server
 import Client
 import socket
 import BetterLog
+import sys
 
 hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
@@ -28,7 +29,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 Version = '0.0-0.0'
 
 
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 PORT = 8888
 
 if RUN_AS_SERVER:
@@ -40,7 +41,7 @@ if RUN_AS_SERVER:
             break
 
 else:
-    client = Client.Client("10.127.28.155")
+    client = Client.Client("10.127.28.148")
 
     while True:
         message = input('Enter your message: ')

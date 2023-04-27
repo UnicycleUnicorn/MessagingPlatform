@@ -1,5 +1,5 @@
-import Packet
 import NetworkHandler
+import Packet
 
 
 class Client:

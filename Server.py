@@ -1,6 +1,8 @@
+from typing import Tuple
+
 import NetworkHandler
 import Packet
-from typing import Tuple
+
 
 class Server:
     def __init__(self, port: int = 8888):

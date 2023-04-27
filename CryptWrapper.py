@@ -1,12 +1,13 @@
 import os
-from cryptography.hazmat.primitives.asymmetric.dh import DHPrivateKey
 from typing import Tuple
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.asymmetric.dh import DHPrivateKey
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 
 class CryptWrapper:
@@ -15,7 +16,8 @@ class CryptWrapper:
     @classmethod
     def generate_dh_keys(cls) -> Tuple[DHPrivateKey, bytes]:
         private = cls._dhparam.generate_private_key()
-        return private, private.public_key().public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+        return private, private.public_key().public_bytes(encoding=serialization.Encoding.PEM,
+                                                          format=serialization.PublicFormat.SubjectPublicKeyInfo)
 
     @classmethod
     def generate_aes_gcm_key(cls, self_private_dh: DHPrivateKey, other_public_dh: bytes) -> AESGCM:

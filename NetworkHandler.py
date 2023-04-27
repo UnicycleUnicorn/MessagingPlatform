@@ -1,22 +1,21 @@
+import asyncio
 import socket
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from typing import Callable, Tuple
 
+import BetterLog
 import NetworkCommunicationConstants
 import Packet
-from typing import Callable, Tuple
-import threading
-import MessageReconstructor
-from concurrent.futures import ThreadPoolExecutor
-import BetterLog
-import asyncio
-from CompletedMessages import CompletedMessages
-
-from OutgoingTracker import OutgoingTracker
+from TransactionHandler import TransactionHandler
 
 
 class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
-        # Create an instance of a message reconstructor
-        self.MESSAGE_RECONSTRUCTOR = MessageReconstructor.MessageReconstructor()
+        # Create a transaction history handler
+        self.TRANSACTION_HANDLER = TransactionHandler()
+        self.find_repeats_resends_and_fails()
+
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -26,14 +25,6 @@ class NetworkHandler:
                                NetworkCommunicationConstants.OUTGOING_BUFFER_SIZE_BYTES)
         self.SOCKET.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
                                NetworkCommunicationConstants.INCOMING_BUFFER_SIZE_BYTES)
-
-        # Track Completed Messages
-        self.COMPLETED_MESSAGES = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
-
-        # Packet status checkers
-        self.OUTGOING_TRACKER = OutgoingTracker()
-        self.__incoming_status_checker()
-        self.__outgoing_status_checker()
 
         # Set the message listener
         self.MESSAGE_LISTENER = listener
@@ -58,31 +49,28 @@ class NetworkHandler:
         self.LOOP.create_task(self.__queue_consume__())
         self.LOOP.run_forever()
 
-    def __outgoing_status_checker(self):
-        resends, failed = self.OUTGOING_TRACKER.find_resends()
-        for fail in failed:
-            BetterLog.log_text(f"Failed to send too many times: {fail}")
-            self.OUTGOING_TRACKER.close(fail)
-            self.MESSAGE_RECONSTRUCTOR.force_close_message(fail)
-        for resend in resends:
-            messageid, packets, recipient = resend
-            if self.OUTGOING_TRACKER.resent(messageid, NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS, resettracker=False):
-                for packet in packets:
-                    self.__send_packet__(packet, recipient)
-        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_S, self.__outgoing_status_checker)
-        status_checker.start()
+    def find_repeats_resends_and_fails(self):
+        repeats, resends, fails = self.TRANSACTION_HANDLER.find_repeats_resends_and_fails()
 
-    def __incoming_status_checker(self):
-        missing_packets = self.MESSAGE_RECONSTRUCTOR.look_for_missing_packets()
-        for missing in missing_packets:
-            packets, messageid, sender = missing
-            if self.MESSAGE_RECONSTRUCTOR.edit_response_time(messageid,
-                                                             NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS):
-                message = Packet.Message(bytes(packets), Packet.PayloadType.SELECTIVE_REPEAT, 69420, messageid)
-                self.send_message(message, sender)
-        status_checker = threading.Timer(NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_S,
-                                         self.__incoming_status_checker)
-        status_checker.start()
+        for fail in fails:
+            self.TRANSACTION_HANDLER.force_close(fail)
+
+        for resend in resends:
+            packets, recipient, message_id = resend
+            for packet in packets:
+                self.__send_packet__(packet, recipient)
+            self.TRANSACTION_HANDLER.resent(message_id)
+
+        for repeat in repeats:
+            repeat_list, recipient, message_id = repeat
+            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920,
+                                     messageid=message_id)
+            self.send_message(message, recipient=recipient, should_track=False)
+            self.TRANSACTION_HANDLER.sent_repeat(message_id)
+
+        # Create a timer to re-call this method in N ns
+        threading.Timer(NetworkCommunicationConstants.FIND_RESEND_REPEAT_FAIL_POLL_TIME_S,
+                        self.find_repeats_resends_and_fails).start()
 
     def __listen__(self):
         while True:
@@ -100,22 +88,17 @@ class NetworkHandler:
             BetterLog.log_incoming("Lame Packet")
             return
         packet = Packet.Packet.from_bytes(raw_packet)
-        BetterLog.log_packet_received(packet)
-        if packet.header.messageid in self.COMPLETED_MESSAGES:
-            BetterLog.log_incoming(f"RECEIVED PACKET REGARDING CLOSED MESSAGE: {packet.header.messageid}")
-        else:
-            message: Packet.Message | None
-            message = self.MESSAGE_RECONSTRUCTOR.received_packet(packet, sender)
-            if message is not None:
-                self.__received_message__(message)
+        message: Packet.Message | None
+        message = self.TRANSACTION_HANDLER.receive_packet(packet, sender)
+        if message is not None:
+            self.__received_message__(message)
 
     def send_ack(self, messageid: bytes, recipient: Tuple[str, int]):
         self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient,
                           should_track=False)
-        self.OUTGOING_TRACKER.close(messageid)
+        self.TRANSACTION_HANDLER.force_close(messageid)
 
     def __received_message__(self, message: Packet.Message):
-        BetterLog.log_message_received(message)
         messageid: bytes = message.messageid
         sender: Tuple[str, int] = message.sender
         if message.payloadtype == Packet.PayloadType.CONNECT:
@@ -138,16 +121,14 @@ class NetworkHandler:
 
         elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
             # ACKNOWLEDGE
-            self.OUTGOING_TRACKER.close(messageid)
-            self.COMPLETED_MESSAGES.add(messageid)
+            self.TRANSACTION_HANDLER.force_close(messageid)
 
         elif message.payloadtype == Packet.PayloadType.SELECTIVE_REPEAT:
             # SELECTIVE REPEAT
-            packets = self.OUTGOING_TRACKER.get_packets(messageid, list(message.payload))
+            packets = self.TRANSACTION_HANDLER.recv_selective_repeat(messageid, list(message.payload))
             if packets is not None:
                 for p in packets:
                     self.__send_packet__(p, sender)
-                self.OUTGOING_TRACKER.resent(messageid, resettracker=True)
 
         else:
             BetterLog.log_incoming("Received Packet with null Payload Type")
@@ -173,10 +154,11 @@ class NetworkHandler:
                 return False
         BetterLog.log_message_sent(message)
         if should_track:
-            self.OUTGOING_TRACKER.sent(message.messageid, sent, recipient)
+            self.TRANSACTION_HANDLER.sent_message(message.messageid, sent, recipient)
         return True
 
     def shutdown(self):
         self.LOOP.call_soon_threadsafe(self.LOOP.stop)
         self.EXECUTOR.shutdown(wait=True)
         self.SOCKET.close()
+        # TODO: Does not handle all of the active threads

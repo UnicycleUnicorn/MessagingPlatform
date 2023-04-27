@@ -1,6 +1,5 @@
 from CryptWrapper import CryptWrapper
 
-
 s_priv, s_pub = CryptWrapper.generate_dh_keys()
 o_priv, o_pub = CryptWrapper.generate_dh_keys()
 

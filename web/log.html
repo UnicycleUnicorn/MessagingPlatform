@@ -1,7 +1,7 @@
 <html>
-    <head>
-        <script type="text/javascript" src="/eel.js"></script>
-        <script type="text/javascript">
+<head>
+    <script src="/eel.js" type="text/javascript"></script>
+    <script type="text/javascript">
             eel.expose(add_log_message);
             function add_log_message(message) {
                 var log_element = document.getElementById('log');
@@ -35,8 +35,9 @@
                     log_element.removeChild(log_element.firstChild);
                 }
             }
-        </script>
-        <style>
+
+    </script>
+    <style>
             .logitem {
                 margin: 25px;
                 padding: 10px;
@@ -61,10 +62,11 @@
                 bottom: 20px;
                 right: 20px;
             }
-        </style>
-    </head>
-    <body>
-        <div  id='log'></div>
-        <button id="clear-button" onclick="clearlog()">Clear Log</button>
-    </body>
+
+    </style>
+</head>
+<body>
+<div id='log'></div>
+<button id="clear-button" onclick="clearlog()">Clear Log</button>
+</body>
 </html>

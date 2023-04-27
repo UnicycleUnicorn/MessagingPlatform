@@ -1,8 +1,8 @@
-import Server
-import Client
 import socket
+
 import BetterLog
-import sys
+import Client
+import Server
 
 hostname = socket.gethostname()
 ip_address = socket.gethostbyname(hostname)
@@ -28,8 +28,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 
 Version = '0.0-0.0'
 
-
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 PORT = 8888
 
 if RUN_AS_SERVER:

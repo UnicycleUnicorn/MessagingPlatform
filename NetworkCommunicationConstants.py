@@ -35,3 +35,7 @@ WAIT_RESPONSE_TIME_S: float = ns_to_s(WAIT_RESPONSE_TIME_NS)
 
 GIVE_UP_REATTEMPTS: int = 3
 ''' Attempts before giving up (int) '''
+
+FIND_RESEND_REPEAT_FAIL_POLL_TIME_NS: int = 25_000_000
+''' Time (ns) between polls for resend, repeats, and failed messages'''
+FIND_RESEND_REPEAT_FAIL_POLL_TIME_S = ns_to_s(FIND_RESEND_REPEAT_FAIL_POLL_TIME_NS)

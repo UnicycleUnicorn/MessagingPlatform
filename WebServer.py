@@ -1,6 +1,5 @@
 import eel
 
-
 # Initialize Eel with your HTML file
 eel.init('web')
 

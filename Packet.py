@@ -1,8 +1,8 @@
-from enum import Enum
-import time
 import math
-from typing import List, Tuple
 import random
+import time
+from enum import Enum
+from typing import List, Tuple
 
 import NetworkCommunicationConstants
 
@@ -230,7 +230,8 @@ class Message:
         self.messageid = messageid
         if _packetcount is None:
             self.packetcount = math.ceil(
-                (len(payload) + FooterFormat.FOOTER_LENGTH) / (NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES - HeaderFormat.HEADER_LENGTH))
+                (len(payload) + FooterFormat.FOOTER_LENGTH) / (
+                            NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES - HeaderFormat.HEADER_LENGTH))
         else:
             self.packetcount = _packetcount
 
@@ -279,8 +280,10 @@ class Message:
                                      self.payload[payloadstart:payloadstart + Message.MAX_PAYLOAD_SIZE_NO_FOOTER])
 
         # CONSTRUCT LAST PACKET
-        packetlist[self.packetcount - 1] = Packet(Header(self.messageid, self.packetcount, self.packetcount - 1), self.payload[
-                                                          (self.packetcount - 1) * Message.MAX_PAYLOAD_SIZE_NO_FOOTER:],Footer(self.payloadtype, self.userid, self.unixtime))
+        packetlist[self.packetcount - 1] = Packet(Header(self.messageid, self.packetcount, self.packetcount - 1),
+                                                  self.payload[
+                                                  (self.packetcount - 1) * Message.MAX_PAYLOAD_SIZE_NO_FOOTER:],
+                                                  Footer(self.payloadtype, self.userid, self.unixtime))
 
         return packetlist
 

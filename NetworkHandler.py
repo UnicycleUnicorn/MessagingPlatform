@@ -129,7 +129,8 @@ class NetworkHandler:
             packets = self.TRANSACTION_HANDLER.recv_selective_repeat(messageid, list(message.payload))
             if packets is not None:
                 for p in packets:
-                    self.__send_packet__(p, sender)
+                    if p is not None:
+                        self.__send_packet__(p, sender)
 
         else:
             BetterLog.log_incoming("Received Packet with null Payload Type")

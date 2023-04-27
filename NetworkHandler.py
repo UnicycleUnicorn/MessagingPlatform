@@ -58,7 +58,8 @@ class NetworkHandler:
         for resend in resends:
             packets, recipient, message_id = resend
             for packet in packets:
-                self.__send_packet__(packet, recipient)
+                if packet is not None:
+                    self.__send_packet__(packet, recipient)
             self.TRANSACTION_HANDLER.resent(message_id)
 
         for repeat in repeats:

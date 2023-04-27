@@ -29,13 +29,13 @@ WAIT_TIME_BEFORE_REPEAT_REQUEST_NS: int = 50_000_000
 ''' Time (ns) waited after most recent packet before asking for a repeat '''
 WAIT_TIME_BEFORE_REPEAT_REQUEST_S: float = ns_to_s(WAIT_TIME_BEFORE_REPEAT_REQUEST_NS)
 
-WAIT_RESPONSE_TIME_NS: int = 75_000_000
+WAIT_RESPONSE_TIME_NS: int = 100_000_000
 ''' Time (ns) waited for response before resending a message '''
 WAIT_RESPONSE_TIME_S: float = ns_to_s(WAIT_RESPONSE_TIME_NS)
 
 GIVE_UP_REATTEMPTS: int = 3
 ''' Attempts before giving up (int) '''
 
-FIND_RESEND_REPEAT_FAIL_POLL_TIME_NS: int = 25_000_000
+FIND_RESEND_REPEAT_FAIL_POLL_TIME_NS: int = 15_000_000
 ''' Time (ns) between polls for resend, repeats, and failed messages'''
 FIND_RESEND_REPEAT_FAIL_POLL_TIME_S = ns_to_s(FIND_RESEND_REPEAT_FAIL_POLL_TIME_NS)

@@ -120,10 +120,9 @@ class LockedDictionary:
 
     def new_incoming_transaction(self, packet: Packet.Packet, sender: Tuple[str, int]):
         BetterLog.log_text(f"New Incoming Transaction Created: {packet.header.messageid}")
-        with self._master_lock:
-            transaction_record = TransactionRecord(True, packet.header.packetcount)
-            transaction_record.communicator = sender
-            self._dict[packet.header.messageid] = transaction_record
+        transaction_record = TransactionRecord(True, packet.header.packetcount)
+        transaction_record.communicator = sender
+        self._dict[packet.header.messageid] = transaction_record
 
     def new_outgoing_transaction(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
         BetterLog.log_text(f"New Outgoing Transaction Created: {message_id}")
@@ -131,6 +130,19 @@ class LockedDictionary:
             transaction_record = TransactionRecord(False, bytepackets)
             transaction_record.communicator = recipient
             self._dict[message_id] = transaction_record
+
+    def recv_packet(self, message_id: bytes, packet: Packet.Packet, sender: Tuple[str, int]):
+        with self._master_lock:
+            if message_id in self._dict:
+                record = self._dict[message_id]
+                packetlist = record.recv_packet(packet)
+                record.release()
+                message = Packet.Message.from_packet_list(packetlist, sender)
+                BetterLog.log_message_received(message)
+                return message
+            else:
+                self.new_incoming_transaction(packet, sender)
+                return None
 
     def __contains__(self, key: bytes):
         with self._master_lock:
@@ -186,16 +198,8 @@ class TransactionHandler:
             BetterLog.log_message_received(message)
             return message
 
-        record = self.active[message_id]
-        if record is None:
-            self.active.new_incoming_transaction(packet, sender)
-            return None
-        else:
-            packetlist = record.recv_packet(packet)
-            record.release()
-            message = Packet.Message.from_packet_list(packetlist, sender)
-            BetterLog.log_message_received(message)
-            return message
+        return self.active.recv_packet(message_id, packet, sender)
+
 
     def sent_message(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
         self.active.new_outgoing_transaction(message_id, bytepackets, recipient)

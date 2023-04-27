@@ -32,7 +32,7 @@ RUN_AS_SERVER = False
 PORT = 8888
 
 if RUN_AS_SERVER:
-    server = Server.Server()
+    server = Server.Server(port=PORT)
 
     while True:
         message = input()
@@ -40,8 +40,8 @@ if RUN_AS_SERVER:
             break
 
 else:
-    client = Client.Client("10.127.28.148")
-
+    client = Client.Client("10.127.28.148", port=PORT)
+    BetterLog.CALLBACK = client.send
     while True:
         message = input('Enter your message: ')
         if message == "x":

@@ -22,6 +22,15 @@ def log_incoming(text: str):
     # Call a JavaScript function to add the message to the log
     eel.add_incoming_message(text)
 
+CALLBACK = None
+
+@eel.expose
+def submit_message(text):
+    try:
+        CALLBACK(text)
+    except:
+        log_text('MESSAGE COULD NOT BE SENT')
+
 
 # Initialize Eel with your HTML file
 eel.init('web')

@@ -29,6 +29,12 @@
                 log_element.appendChild(new_element);
             }
 
+            function sendmessage() {
+                var text_box = document.getElementById('input');
+                eel.submit_message(text_box.value);
+                text_box.value = '';
+            }
+
             function clearlog() {
                 var log_element = document.getElementById('log');
                 while (log_element.firstChild) {
@@ -57,16 +63,36 @@
             body {
                 background-color: black;
             }
+            #log {
+                margin-bottom: 150px;
+            }
             #clear-button {
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
             }
-
+            #input {
+                color: white;
+                background-color: black;
+                border: 1px solid darkgrey;
+                border-radius: 5px;
+                width: 80vw;
+                padding: 10px;
+                height: 100px;
+                position: fixed;
+                bottom: 20px;
+            }
+            #submit-button {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+            }
     </style>
 </head>
 <body>
-<div id='log'></div>
-<button id="clear-button" onclick="clearlog()">Clear Log</button>
+    <div id='log'></div>
+    <textarea id="input"></textarea>
+    <button id="submit-button" onclick="sendmessage()">Send Message</button>
+    <button id="clear-button" onclick="clearlog()">Clear Log</button>
 </body>
 </html>

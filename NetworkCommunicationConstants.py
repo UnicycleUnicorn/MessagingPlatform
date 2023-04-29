@@ -7,7 +7,7 @@ def s_to_ns(s): return int(s * 1_000_000_000)
 def ns_to_s(ns): return float(ns / 1_000_000_000)
 
 
-MAXIMUM_PACKET_SIZE_BYTES: int = 982
+MAXIMUM_PACKET_SIZE_BYTES: int = 982 - 512
 ''' Maximum packet size (bytes) sent by our protocol, keep in mind that this does not include UDP headers '''
 
 HEARTBEAT_FREQUENCY_NS: int = 0
@@ -29,7 +29,7 @@ WAIT_TIME_BEFORE_REPEAT_REQUEST_NS: int = 50_000_000
 ''' Time (ns) waited after most recent packet before asking for a repeat '''
 WAIT_TIME_BEFORE_REPEAT_REQUEST_S: float = ns_to_s(WAIT_TIME_BEFORE_REPEAT_REQUEST_NS)
 
-WAIT_RESPONSE_TIME_NS: int = 100_000_000
+WAIT_RESPONSE_TIME_NS: int = 200_000_000
 ''' Time (ns) waited for response before resending a message '''
 WAIT_RESPONSE_TIME_S: float = ns_to_s(WAIT_RESPONSE_TIME_NS)
 

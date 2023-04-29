@@ -63,8 +63,7 @@ class TransactionRecord:
 
     def sent_repeat(self):
         self.reattempts += 1
-        self.incoming.selective_repeat_time = create_response_time(
-            NetworkCommunicationConstants.WAIT_TIME_BEFORE_REPEAT_REQUEST_NS)
+        self.incoming.selective_repeat_time = create_response_time(NetworkCommunicationConstants.WAIT_RESPONSE_TIME_NS)
 
     def resent(self):
         self.reattempts += 1
@@ -122,6 +121,7 @@ class LockedDictionary:
         BetterLog.log_text(f"New Incoming Transaction Created: {packet.header.messageid}")
         transaction_record = TransactionRecord(True, packet.header.packetcount)
         transaction_record.communicator = sender
+        transaction_record.recv_packet(packet)
         self._dict[packet.header.messageid] = transaction_record
 
     def new_outgoing_transaction(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
@@ -138,7 +138,6 @@ class LockedDictionary:
                 packetlist = record.recv_packet(packet)
                 record.release()
                 message = Packet.Message.from_packet_list(packetlist, sender)
-                BetterLog.log_message_received(message)
                 return message
             else:
                 self.new_incoming_transaction(packet, sender)
@@ -186,7 +185,7 @@ class TransactionHandler:
         self.active = LockedDictionary()
         self.completed = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
 
-    def receive_packet(self, packet: Packet.Packet, sender: Tuple[str, int]) -> Packet.Message | None:
+    def receive_packet_internal(self, packet: Packet.Packet, sender: Tuple[str, int]) -> Packet.Message | None:
         message_id = packet.header.messageid
 
         if message_id in self.completed:  # Packet relates to an already completed transaction
@@ -195,11 +194,19 @@ class TransactionHandler:
         BetterLog.log_packet_received(packet)
         if packet.header.packetcount == 1:  # Automatically create a message and return it if the message only has one packet
             message = Packet.Message.from_packet_list([packet], sender)
-            BetterLog.log_message_received(message)
             return message
 
         return self.active.recv_packet(message_id, packet, sender)
 
+    def receive_packet(self, packet: Packet.Packet, sender: Tuple[str, int]) -> Packet.Message | None:
+        possible_message = self.receive_packet_internal(packet, sender)
+
+        if possible_message is None:
+            return None
+
+        BetterLog.log_message_received(possible_message)
+
+        return possible_message
 
     def sent_message(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
         self.active.new_outgoing_transaction(message_id, bytepackets, recipient)

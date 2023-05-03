@@ -182,10 +182,11 @@ class OutgoingTransaction:
 
 
 class TransactionHandler:
-    def __init__(self, outgoing_queue: asyncio.queues.Queue, outgoing_loop: asyncio.AbstractEventLoop):
+    def __init__(self, outgoing_queue: asyncio.queues.Queue, outgoing_loop: asyncio.AbstractEventLoop, user_id: int):
         self.active = LockedDictionary()
         self.outgoing_queue = outgoing_queue
         self.outgoing_loop = outgoing_loop
+        self.USER_ID = user_id
         self.completed = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
 
     def send_packet(self, packet: bytes, recipient: Tuple[str, int]):
@@ -226,7 +227,7 @@ class TransactionHandler:
 
             return None
 
-        message = Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 64920, messageid=possible_message.messageid)
+        message = Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, self.USER_ID, messageid=possible_message.messageid)
         pkts = message.to_packet_list()
         for packet in pkts:
             self.send_packet(packet.to_bytes(), sender)
@@ -260,7 +261,7 @@ class TransactionHandler:
 
         for repeat in repeats:
             repeat_list, recipient, message_id = repeat
-            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920,
+            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, self.USER_ID,
                                      messageid=message_id)
             pkts = message.to_packet_list()
             for packet in pkts:

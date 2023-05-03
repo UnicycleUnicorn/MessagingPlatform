@@ -29,18 +29,20 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 Version = '0.0-0.0'
 
 RUN_AS_SERVER = False
+USER_ID = 69420
 PORT = 8888
 
 if RUN_AS_SERVER:
     server = Server.Server(port=PORT)
-
+    BetterLog.CALLBACK = server.broadcast_text
     while True:
         message = input()
         if message == "x":
             break
 
 else:
-    client = Client.Client("10.127.15.85", port=PORT)
+    BetterLog.PRETTY_PRINT = True
+    client = Client.Client("10.127.15.85", USER_ID, port=PORT)
     BetterLog.CALLBACK = client.send
     while True:
         message = input('Enter your message: ')

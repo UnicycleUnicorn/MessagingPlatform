@@ -4,25 +4,36 @@ import eel
 
 from Packet import Packet, Message
 
+PRETTY_PRINT = False
+CALLBACK = None
+
 
 @eel.expose
 def log_text(text: str):
-    # Call a JavaScript function to add the message to the log
-    eel.add_log_message(text)
+    if not PRETTY_PRINT:
+        # Call a JavaScript function to add the message to the log
+        eel.add_log_message(text)
 
 
 @eel.expose
 def log_outgoing(text: str):
-    # Call a JavaScript function to add the message to the log
-    eel.add_outgoing_message(text)
+    if not PRETTY_PRINT:
+        # Call a JavaScript function to add the message to the log
+        eel.add_outgoing_message(text)
 
 
 @eel.expose
 def log_incoming(text: str):
-    # Call a JavaScript function to add the message to the log
-    eel.add_incoming_message(text)
+    if not PRETTY_PRINT:
+        # Call a JavaScript function to add the message to the log
+        eel.add_incoming_message(text)
 
-CALLBACK = None
+
+@eel.expose
+def log_message_text(text: str, sender: str, isself: bool = False):
+    if PRETTY_PRINT:
+        eel.add_message_text(text, sender, isself)
+
 
 @eel.expose
 def submit_message(text):

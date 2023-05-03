@@ -10,7 +10,6 @@
                 new_element.textContent = message;
                 log_element.appendChild(new_element);
             }
-
             eel.expose(add_outgoing_message);
             function add_outgoing_message(message) {
                 var log_element = document.getElementById('log');
@@ -42,6 +41,26 @@
                 }
             }
 
+            eel.expose(add_message_text);
+            function add_message_text(message, sender, isself) {
+                var log_element = document.getElementById('log');
+
+                var new_message = document.createElement('pre');
+                if (isself) {
+                    new_message.classList.add('logitem', 'message-text-self');
+                } else {
+                    new_message.classList.add('logitem', 'message-text');
+                }
+                new_message.textContent = message;
+
+                var new_message_sender = document.createElement('pre');
+                new_message_sender.classList.add('logitem', 'message-sender');
+                new_message_sender.textContent = sender;
+
+                log_element.appendChild(new_message_sender);
+                log_element.appendChild(new_message);
+            }
+
     </script>
     <style>
             .logitem {
@@ -54,6 +73,28 @@
             .message {
                 color: white;
             }
+
+            .message-sender {
+                color: #D3d3d3;
+                background-color: #132020;
+                border-radius: 6px;
+                width: 100px;
+                padding: 8px;
+                padding-bottom: 14px;
+                margin-bottom: -31px;
+                margin-left: 45px;
+            }
+            .message-text {
+                color: #D3d3d3;
+                background-color: #172727;
+                border-radius: 10px;
+            }
+            .message-text-self {
+                color: #D3d3d3;
+                background-color: #284343;
+                border-radius: 10px;
+            }
+
             .outgoing {
                 color: green;
             }

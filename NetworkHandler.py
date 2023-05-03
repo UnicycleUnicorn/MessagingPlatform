@@ -10,7 +10,8 @@ from TransactionHandler import TransactionHandler
 
 
 class NetworkHandler:
-    def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
+    def __init__(self, port: int, listener: Callable[[Packet.Message], None], user_id: int, host: str = ''):
+        self.USER_ID = user_id
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -42,7 +43,7 @@ class NetworkHandler:
         t.start()
 
         # Create a transaction history handler
-        self.TRANSACTION_HANDLER = TransactionHandler(self.OUTGOING_QUEUE, self.OUTGOING_LOOP)
+        self.TRANSACTION_HANDLER = TransactionHandler(self.OUTGOING_QUEUE, self.OUTGOING_LOOP, self.USER_ID)
         self.find_repeats_resends_and_fails()
 
         # Listen for packets
@@ -103,7 +104,7 @@ class NetworkHandler:
             self.__received_message__(message)
 
     def send_ack(self, messageid: bytes, recipient: Tuple[str, int]):
-        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 69420, messageid=messageid), recipient,
+        self.send_message(Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, self.USER_ID, messageid=messageid), recipient,
                           should_track=False)
         self.TRANSACTION_HANDLER.force_close(messageid)
 

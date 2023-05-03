@@ -6,12 +6,13 @@ import BetterLog
 
 
 class Server:
-    def __init__(self, port: int = 8888):
-        self.handler = NetworkHandler.NetworkHandler(port, self.__recv__)
+    def __init__(self, user_id: int = 0, port: int = 8888):
+        self.handler = NetworkHandler.NetworkHandler(port, self.__recv__, user_id)
+        self.user_id = user_id
         self.clients: List[Tuple[str, int]] = []
 
     def send(self, message: str, recipient: Tuple[str, int]):
-        message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, 69420)
+        message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, self.user_id)
         self.handler.send_message(message, recipient)
 
     def add_client(self, client: Tuple[str, int]) -> bool:
@@ -27,6 +28,10 @@ class Server:
             BetterLog.log_text(f"REMOVED CLIENT: {client}")
             return True
         return False
+
+    def broadcast_text(self, text: str):
+        for client in self.clients:
+            self.send(text, client)
 
     def __recv__(self, message: Packet.Message):
         messageid: bytes = message.messageid

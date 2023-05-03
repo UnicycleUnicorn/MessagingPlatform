@@ -1,3 +1,4 @@
+import asyncio
 import threading
 import time
 from collections import OrderedDict
@@ -181,9 +182,14 @@ class OutgoingTransaction:
 
 
 class TransactionHandler:
-    def __init__(self):
+    def __init__(self, outgoing_queue: asyncio.queues.Queue, outgoing_loop:  asyncio.AbstractEventLoop):
         self.active = LockedDictionary()
+        self.outgoing_queue = outgoing_queue
+        self.outgoing_loop = outgoing_loop
         self.completed = CompletedMessages(NetworkCommunicationConstants.COMPLETED_MESSAGE_BUFFER_SIZE)
+
+    def send_packet(self, packet: bytes, recipient: Tuple[str, int]):
+        asyncio.run_coroutine_threadsafe(self.outgoing_queue.put((packet, recipient)), self.outgoing_loop)
 
     def receive_packet_internal(self, packet: Packet.Packet, sender: Tuple[str, int]) -> Packet.Message | None:
         message_id = packet.header.messageid
@@ -205,8 +211,28 @@ class TransactionHandler:
             return None
 
         BetterLog.log_message_received(possible_message)
+        msg_type = possible_message.payloadtype
+        if msg_type == Packet.PayloadType.ACKNOWLEDGE:
+            self.force_close(possible_message.messageid)
+            return None
 
+        if msg_type == Packet.PayloadType.SELECTIVE_REPEAT:
+            packets = self.recv_selective_repeat(possible_message.messageid, list(possible_message.payload))
+            if packets is not None:
+                for p in packets:
+                    if p is not None:
+                        self.send_packet(p, sender)
+
+            return None
+
+        message = Packet.Message(b'', Packet.PayloadType.SELECTIVE_REPEAT, 64920, messageid=possible_message.messageid)
+        pkts = message.to_packet_list()
+        for packet in pkts:
+            self.send_packet(packet.to_bytes(), sender)
+        self.force_close(message_id=possible_message.messageid)
         return possible_message
+
+
 
     def sent_message(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
         self.active.new_outgoing_transaction(message_id, bytepackets, recipient)
@@ -216,9 +242,32 @@ class TransactionHandler:
         BetterLog.log_text(f"Closed Message: {message_id}")
         return bool(self.active.pop(message_id))
 
-    def find_repeats_resends_and_fails(self) -> Tuple[
+    def poll_ongoing(self) -> Tuple[
         List[Tuple[List[int], Tuple[str, int], bytes]], List[Tuple[List[bytes], Tuple[str, int], bytes]], List[bytes]]:
         return self.active.find_repeats_resends_and_fails()
+
+    def fix_ongoing(self) -> List[bytes]:
+        repeats, resends, fails = self.poll_ongoing()
+
+        for fail in fails:
+            self.force_close(fail)
+
+        for resend in resends:
+            packets, recipient, message_id = resend
+            for packet in packets:
+                if packet is not None:
+                    self.send_packet(packet, recipient)
+            self.resent(message_id)
+
+        for repeat in repeats:
+            repeat_list, recipient, message_id = repeat
+            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920, messageid=message_id)
+            pkts = message.to_packet_list()
+            for packet in pkts:
+                self.send_packet(packet.to_bytes(), recipient)
+            self.sent_repeat(message_id)
+
+        return fails
 
     def resent(self, message_id: bytes):
         transaction_record = self.active[message_id]

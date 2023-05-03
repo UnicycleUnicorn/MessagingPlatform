@@ -14,7 +14,7 @@ class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
         # Create a transaction history handler
         self.TRANSACTION_HANDLER = TransactionHandler()
-        self.find_repeats_resends_and_fails()
+        self.poll_ongoing()
 
         self.PORT = port
         self.HOST = host
@@ -49,8 +49,8 @@ class NetworkHandler:
         self.LOOP.create_task(self.__incoming_queue_consume())
         self.LOOP.run_forever()
 
-    def find_repeats_resends_and_fails(self):
-        repeats, resends, fails = self.TRANSACTION_HANDLER.find_repeats_resends_and_fails()
+    def poll_ongoing(self):
+        repeats, resends, fails = self.TRANSACTION_HANDLER.poll_ongoing()
 
         for fail in fails:
             self.TRANSACTION_HANDLER.force_close(fail)
@@ -71,7 +71,7 @@ class NetworkHandler:
 
         # Create a timer to re-call this method in N ns
         threading.Timer(NetworkCommunicationConstants.FIND_RESEND_REPEAT_FAIL_POLL_TIME_S,
-                        self.find_repeats_resends_and_fails).start()
+                        self.poll_ongoing).start()
 
     def __listen__(self):
         while True:
@@ -182,7 +182,7 @@ class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
         # Create a transaction history handler
         self.TRANSACTION_HANDLER = TransactionHandler()
-        self.find_repeats_resends_and_fails()
+        self.poll_ongoing()
 
         self.PORT = port
         self.HOST = host
@@ -217,8 +217,8 @@ class NetworkHandler:
         self.LOOP.create_task(self.__incoming_queue_consume())
         self.LOOP.run_forever()
 
-    def find_repeats_resends_and_fails(self):
-        repeats, resends, fails = self.TRANSACTION_HANDLER.find_repeats_resends_and_fails()
+    def poll_ongoing(self):
+        repeats, resends, fails = self.TRANSACTION_HANDLER.poll_ongoing()
 
         for fail in fails:
             self.TRANSACTION_HANDLER.force_close(fail)
@@ -239,7 +239,7 @@ class NetworkHandler:
 
         # Create a timer to re-call this method in N ns
         threading.Timer(NetworkCommunicationConstants.FIND_RESEND_REPEAT_FAIL_POLL_TIME_S,
-                        self.find_repeats_resends_and_fails).start()
+                        self.poll_ongoing).start()
 
     def __listen__(self):
         while True:

@@ -11,10 +11,6 @@ from TransactionHandler import TransactionHandler
 
 class NetworkHandler:
     def __init__(self, port: int, listener: Callable[[Packet.Message], None], host: str = ''):
-        # Create a transaction history handler
-        self.TRANSACTION_HANDLER = TransactionHandler()
-        self.find_repeats_resends_and_fails()
-
         self.PORT = port
         self.HOST = host
         self.SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -45,6 +41,10 @@ class NetworkHandler:
         t.daemon = True
         t.start()
 
+        # Create a transaction history handler
+        self.TRANSACTION_HANDLER = TransactionHandler(self.OUTGOING_QUEUE, self.OUTGOING_LOOP)
+        self.find_repeats_resends_and_fails()
+
         # Listen for packets
         t = threading.Thread(target=self.__listen__)
         t.daemon = True
@@ -61,24 +61,7 @@ class NetworkHandler:
         self.OUTGOING_LOOP.run_forever()
 
     def find_repeats_resends_and_fails(self):
-        repeats, resends, fails = self.TRANSACTION_HANDLER.find_repeats_resends_and_fails()
-
-        for fail in fails:
-            self.TRANSACTION_HANDLER.force_close(fail)
-
-        for resend in resends:
-            packets, recipient, message_id = resend
-            for packet in packets:
-                if packet is not None:
-                    self.__send_packet__(packet, recipient)
-            self.TRANSACTION_HANDLER.resent(message_id)
-
-        for repeat in repeats:
-            repeat_list, recipient, message_id = repeat
-            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920,
-                                     messageid=message_id)
-            self.send_message(message, recipient=recipient, should_track=False)
-            self.TRANSACTION_HANDLER.sent_repeat(message_id)
+        fails = self.TRANSACTION_HANDLER.fix_ongoing()
 
         # Create a timer to re-call this method in N ns
         threading.Timer(NetworkCommunicationConstants.FIND_RESEND_REPEAT_FAIL_POLL_TIME_S,
@@ -97,11 +80,8 @@ class NetworkHandler:
 
     async def __outgoing_queue_consume(self):
         while True:
-            BetterLog.log_text("CONSUMPTION")
             raw_packet, recipient = await self.OUTGOING_QUEUE.get()
-            BetterLog.log_text("CONSUMED")
             self.__send_raw_packet(raw_packet, recipient)
-            BetterLog.log_text("SENT")
 
     def __send_raw_packet(self, raw_packet: bytes, recipient: Tuple[str, int]):
         try:
@@ -128,44 +108,14 @@ class NetworkHandler:
         self.TRANSACTION_HANDLER.force_close(messageid)
 
     def __received_message__(self, message: Packet.Message):
-        messageid: bytes = message.messageid
-        sender: Tuple[str, int] = message.sender
-        if message.payloadtype == Packet.PayloadType.CONNECT:
-            # CONNECT
-            self.send_ack(messageid, sender)
+        self.MESSAGE_LISTENER(message)
 
-        elif message.payloadtype == Packet.PayloadType.DISCONNECT:
-            # DISCONNECT
-            self.send_ack(messageid, sender)
-
-        elif message.payloadtype == Packet.PayloadType.HEARTBEAT:
-            # HEARTBEAT
-            self.send_ack(messageid, sender)
-
-        elif message.payloadtype == Packet.PayloadType.CHAT:
-            # CHAT
-            self.MESSAGE_LISTENER(message)
-            self.send_ack(messageid, sender)
-            pass
-
-        elif message.payloadtype == Packet.PayloadType.ACKNOWLEDGE:
-            # ACKNOWLEDGE
-            self.TRANSACTION_HANDLER.force_close(messageid)
-
-        elif message.payloadtype == Packet.PayloadType.SELECTIVE_REPEAT:
-            # SELECTIVE REPEAT
-            packets = self.TRANSACTION_HANDLER.recv_selective_repeat(messageid, list(message.payload))
-            if packets is not None:
-                for p in packets:
-                    if p is not None:
-                        self.__send_packet__(p, sender)
-
-        else:
-            BetterLog.log_incoming("Received Packet with null Payload Type")
+    def __add_to_outgoing__(self, packet: bytes, recipient: Tuple[str, int]):
+        asyncio.run_coroutine_threadsafe(self.OUTGOING_QUEUE.put((packet, recipient)), self.OUTGOING_LOOP)
 
     def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
-            asyncio.run_coroutine_threadsafe(self.OUTGOING_QUEUE.put((packet, recipient)), self.OUTGOING_LOOP)
+            self.__add_to_outgoing__(packet, recipient)
             return True
         except asyncio.QueueFull:
             BetterLog.log_text("OUTGOING QUEUE FULL")

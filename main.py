@@ -1,13 +1,8 @@
-import socket
-
 import BetterLog
 import Client
 import Server
+import random
 
-hostname = socket.gethostname()
-ip_address = socket.gethostbyname(hostname)
-BetterLog.log_text(f"Hostname: {hostname}")
-BetterLog.log_text(f"IP Address: {ip_address}")
 
 # TODO: tor / i2p
 # TODO: GUI
@@ -29,7 +24,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 Version = '0.0-0.0'
 
 RUN_AS_SERVER = False
-USER_ID = 69420
+USER_ID = random.randint(1, 4294967295)
 PORT = 8888
 
 if RUN_AS_SERVER:

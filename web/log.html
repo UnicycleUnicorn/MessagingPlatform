@@ -41,6 +41,8 @@
                 }
             }
 
+            var recent_sender = 0;
+
             eel.expose(add_message_text);
             function add_message_text(message, sender, isself) {
                 var log_element = document.getElementById('log');
@@ -53,11 +55,19 @@
                 }
                 new_message.textContent = message;
 
-                var new_message_sender = document.createElement('pre');
-                new_message_sender.classList.add('logitem', 'message-sender');
-                new_message_sender.textContent = sender;
+                if (recent_sender != sender) {
+                    recent_sender = sender;
+                    var new_message_sender = document.createElement('pre');
+                    new_message_sender.classList.add('logitem', 'message-sender');
+                    new_message_sender.textContent = sender;
 
-                log_element.appendChild(new_message_sender);
+                    log_element.appendChild(new_message_sender);
+
+                } else {
+                    new_message.classList.add('smaller-upper-margin');
+                }
+
+
                 log_element.appendChild(new_message);
             }
 
@@ -91,8 +101,11 @@
             }
             .message-text-self {
                 color: #D3d3d3;
-                background-color: #284343;
+                background-color: #1f3535;
                 border-radius: 10px;
+            }
+            .smaller-upper-margin {
+                margin-top: -20px;
             }
 
             .outgoing {

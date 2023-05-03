@@ -3,7 +3,6 @@ import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Tuple
-
 import BetterLog
 import NetworkCommunicationConstants
 import Packet
@@ -33,9 +32,16 @@ class NetworkHandler:
         self.EXECUTOR = ThreadPoolExecutor(max_workers=6)
 
         # Create the loop to handle queued items
-        self.MESSAGE_QUEUE = asyncio.Queue(maxsize=500)
-        self.LOOP = asyncio.new_event_loop()
-        t = threading.Thread(target=self.__looper__)
+        self.INCOMING_QUEUE = asyncio.Queue(maxsize=500)
+        self.INCOMING_LOOP = asyncio.new_event_loop()
+        t = threading.Thread(target=self.__incoming_looper__)
+        t.daemon = True
+        t.start()
+
+        # Create the queue to handle outgoing items
+        self.OUTGOING_QUEUE = asyncio.Queue(maxsize=10000)
+        self.OUTGOING_LOOP = asyncio.new_event_loop()
+        t = threading.Thread(target=self.__outgoing_looper__)
         t.daemon = True
         t.start()
 
@@ -44,10 +50,15 @@ class NetworkHandler:
         t.daemon = True
         t.start()
 
-    def __looper__(self):
-        asyncio.set_event_loop(self.LOOP)
-        self.LOOP.create_task(self.__queue_consume__())
-        self.LOOP.run_forever()
+    def __incoming_looper__(self):
+        asyncio.set_event_loop(self.INCOMING_LOOP)
+        self.INCOMING_LOOP.create_task(self.__incoming_queue_consume())
+        self.INCOMING_LOOP.run_forever()
+
+    def __outgoing_looper__(self):
+        asyncio.set_event_loop(self.OUTGOING_LOOP)
+        self.OUTGOING_LOOP.create_task(self.__outgoing_queue_consume())
+        self.OUTGOING_LOOP.run_forever()
 
     def find_repeats_resends_and_fails(self):
         repeats, resends, fails = self.TRANSACTION_HANDLER.find_repeats_resends_and_fails()
@@ -76,13 +87,30 @@ class NetworkHandler:
     def __listen__(self):
         while True:
             asyncio.run_coroutine_threadsafe(
-                self.MESSAGE_QUEUE.put(self.SOCKET.recvfrom(NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES)),
-                self.LOOP)
+                self.INCOMING_QUEUE.put(self.SOCKET.recvfrom(NetworkCommunicationConstants.MAXIMUM_PACKET_SIZE_BYTES)),
+                self.INCOMING_LOOP)
 
-    async def __queue_consume__(self):
+    async def __incoming_queue_consume(self):
         while True:
-            raw_packet, sender = await self.MESSAGE_QUEUE.get()
+            raw_packet, sender = await self.INCOMING_QUEUE.get()
             self.EXECUTOR.submit(self.__received_packet__, raw_packet, sender)
+
+    async def __outgoing_queue_consume(self):
+        while True:
+            BetterLog.log_text("CONSUMPTION")
+            raw_packet, recipient = await self.OUTGOING_QUEUE.get()
+            BetterLog.log_text("CONSUMED")
+            self.__send_raw_packet(raw_packet, recipient)
+            BetterLog.log_text("SENT")
+
+    def __send_raw_packet(self, raw_packet: bytes, recipient: Tuple[str, int]):
+        try:
+            self.SOCKET.sendto(raw_packet, recipient)
+            BetterLog.log_packet_sent_bytes(raw_packet)
+            return True
+        except socket.error as e:
+            BetterLog.log_failed_packet_send_bytes(raw_packet, e)
+            return False
 
     def __received_packet__(self, raw_packet: bytes, sender: Tuple[str, int]):
         if not raw_packet:
@@ -137,11 +165,10 @@ class NetworkHandler:
 
     def __send_packet__(self, packet: bytes, recipient: Tuple[str, int]) -> bool:
         try:
-            self.SOCKET.sendto(packet, recipient)
-            BetterLog.log_packet_sent_bytes(packet)
+            asyncio.run_coroutine_threadsafe(self.OUTGOING_QUEUE.put((packet, recipient)), self.OUTGOING_LOOP)
             return True
-        except socket.error as e:
-            BetterLog.log_failed_packet_send_bytes(packet, e)
+        except asyncio.QueueFull:
+            BetterLog.log_text("OUTGOING QUEUE FULL")
             return False
 
     def send_message(self, message: Packet.Message, recipient=None, should_track=True) -> bool:
@@ -160,7 +187,7 @@ class NetworkHandler:
         return True
 
     def shutdown(self):
-        self.LOOP.call_soon_threadsafe(self.LOOP.stop)
+        self.INCOMING_LOOP.call_soon_threadsafe(self.INCOMING_LOOP.stop)
         self.EXECUTOR.shutdown(wait=True)
         self.SOCKET.close()
         # TODO: Does not handle all of the active threads

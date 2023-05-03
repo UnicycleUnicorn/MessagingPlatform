@@ -28,7 +28,7 @@ BetterLog.log_text(f"IP Address: {ip_address}")
 
 Version = '0.0-0.0'
 
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 PORT = 8888
 
 if RUN_AS_SERVER:
@@ -40,7 +40,7 @@ if RUN_AS_SERVER:
             break
 
 else:
-    client = Client.Client("10.127.28.148", port=PORT)
+    client = Client.Client("10.127.15.85", port=PORT)
     BetterLog.CALLBACK = client.send
     while True:
         message = input('Enter your message: ')

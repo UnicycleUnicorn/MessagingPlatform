@@ -182,7 +182,7 @@ class OutgoingTransaction:
 
 
 class TransactionHandler:
-    def __init__(self, outgoing_queue: asyncio.queues.Queue, outgoing_loop:  asyncio.AbstractEventLoop):
+    def __init__(self, outgoing_queue: asyncio.queues.Queue, outgoing_loop: asyncio.AbstractEventLoop):
         self.active = LockedDictionary()
         self.outgoing_queue = outgoing_queue
         self.outgoing_loop = outgoing_loop
@@ -212,6 +212,7 @@ class TransactionHandler:
 
         BetterLog.log_message_received(possible_message)
         msg_type = possible_message.payloadtype
+
         if msg_type == Packet.PayloadType.ACKNOWLEDGE:
             self.force_close(possible_message.messageid)
             return None
@@ -225,14 +226,12 @@ class TransactionHandler:
 
             return None
 
-        message = Packet.Message(b'', Packet.PayloadType.SELECTIVE_REPEAT, 64920, messageid=possible_message.messageid)
+        message = Packet.Message(b'', Packet.PayloadType.ACKNOWLEDGE, 64920, messageid=possible_message.messageid)
         pkts = message.to_packet_list()
         for packet in pkts:
             self.send_packet(packet.to_bytes(), sender)
         self.force_close(message_id=possible_message.messageid)
         return possible_message
-
-
 
     def sent_message(self, message_id: bytes, bytepackets: List[bytes], recipient: Tuple[str, int]):
         self.active.new_outgoing_transaction(message_id, bytepackets, recipient)
@@ -261,7 +260,8 @@ class TransactionHandler:
 
         for repeat in repeats:
             repeat_list, recipient, message_id = repeat
-            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920, messageid=message_id)
+            message = Packet.Message(bytes(repeat_list), Packet.PayloadType.SELECTIVE_REPEAT, 64920,
+                                     messageid=message_id)
             pkts = message.to_packet_list()
             for packet in pkts:
                 self.send_packet(packet.to_bytes(), recipient)

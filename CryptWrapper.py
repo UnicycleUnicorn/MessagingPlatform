@@ -4,18 +4,15 @@ from typing import Tuple
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import dh
-from cryptography.hazmat.primitives.asymmetric.dh import DHPrivateKey
+from cryptography.hazmat.primitives.asymmetric.dh import DHPrivateKey, DHParameters
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 
 class CryptWrapper:
-    _dhparam = dh.generate_parameters(generator=2, key_size=2048, backend=default_backend())
-
     @classmethod
-    def generate_dh_keys(cls) -> Tuple[DHPrivateKey, bytes]:
-        private = cls._dhparam.generate_private_key()
+    def generate_dh_keys(cls, dh_parameters: DHParameters) -> Tuple[DHPrivateKey, bytes]:
+        private = dh_parameters.generate_private_key()
         return private, private.public_key().public_bytes(encoding=serialization.Encoding.PEM,
                                                           format=serialization.PublicFormat.SubjectPublicKeyInfo)
 

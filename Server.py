@@ -47,8 +47,8 @@ class Server:
         sender: Tuple[str, int] = message.sender
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
-            self.clients.received_connection(sender, message.userid)
-            t = threading.Thread(target=self.generate_dh_and_send_public, args=(sender, ))
+            self.clients.received_connection(sender, message.userid, message.payload)
+            t = threading.Thread(target=self.generate_dh_and_send_public, args=(sender,))
             t.daemon = True
             t.start()
 
@@ -66,7 +66,7 @@ class Server:
 
         elif message.payloadtype == Packet.PayloadType.DH_KEY:
             # DH KEY
-            t = threading.Thread(target=self.generate_aes_gcm_and_send_prepared, args=(message.payload,sender))
+            t = threading.Thread(target=self.generate_aes_gcm_and_send_prepared, args=(message.payload, sender))
             t.daemon = True
             t.start()
 

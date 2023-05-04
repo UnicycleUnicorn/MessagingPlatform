@@ -1,9 +1,11 @@
-from CryptWrapper import CryptWrapper
-from cryptography.hazmat.primitives.asymmetric.dh import DHPrivateKey
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-import asyncio
 import time
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.asymmetric import dh
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 import BetterLog
+from CryptWrapper import CryptWrapper
 
 
 class AESGCMKeyHasNotBeenGenerated(Exception):
@@ -11,16 +13,23 @@ class AESGCMKeyHasNotBeenGenerated(Exception):
 
 
 class EncryptionHandler:
-    def __init__(self):
+    def __init__(self, dh_parameters: bytes | None):
         self.self_prepared = False
         self.other_prepared = False
         self.aes_gcm_shared_key: AESGCM | None = None
         self.dh_public_key = None
         self.dh_private_key = None
+        if dh_parameters is None:
+            self.dh_parameters = dh.generate_parameters(generator=2, key_size=2048, backend=default_backend())
+            self.dh_parameters_bytes = self.dh_parameters.parameter_bytes(encoding=serialization.Encoding.PEM, format=serialization.ParameterFormat.PKCS3)
+        else:
+            self.dh_parameters_bytes = dh_parameters
+            self.dh_parameters = serialization.load_pem_parameters(dh_parameters, backend=default_backend())
 
     def generate_dh_keys(self) -> bytes:
-        self.dh_private_key, self.dh_public_key = CryptWrapper.generate_dh_keys()
+        self.dh_private_key, self.dh_public_key = CryptWrapper.generate_dh_keys(self.dh_parameters)
         BetterLog.log_text('DH KEYS GENERATED')
+        BetterLog.log_text(self.dh_public_key.decode())
         return self.dh_public_key
 
     def is_prepared(self):
@@ -28,6 +37,7 @@ class EncryptionHandler:
 
     def received_other_public_key(self, other_public_key: bytes):
         BetterLog.log_text('OTHER DH KEY RECEIVED')
+        BetterLog.log_text(other_public_key.decode())
         while self.dh_private_key is None:
             time.sleep(0.01)
 

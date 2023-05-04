@@ -13,12 +13,14 @@ class Client:
         self.user_id = user_id
         self.encryption_handler = EncryptionHandler(None)
 
+        self.handler.send_message(
+            Packet.Message(self.encryption_handler.dh_parameters_bytes, Packet.PayloadType.CONNECT, self.user_id), None)
+
         t = threading.Thread(target=self.generate_dh_and_send_public)
         t.daemon = True
         t.start()
 
-        self.handler.send_message(
-            Packet.Message(self.encryption_handler.dh_parameters_bytes, Packet.PayloadType.CONNECT, self.user_id), None)
+
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):

@@ -25,16 +25,18 @@ class Server:
         if is_prepared:
             self.send_message(Packet.PayloadType.PREPARED, client)
 
-    def send_message(self, payload_type: Packet.PayloadType, recipient: Tuple[str, int], payload: bytes = b'', unix_time: None | int = None):
+    def send_message(self, payload_type: Packet.PayloadType, recipient: Tuple[str, int], payload: bytes = b'', unix_time: None | int = None, user_id: int | None = None):
+        if user_id is None:
+            user_id = self.user_id
         if payload_type.should_encrypt():
             if self.clients.client_dictionary[recipient].encryption_handler.is_prepared():
                 payload = self.clients.client_dictionary[recipient].encryption_handler.encrypt(payload)
-                message = Packet.Message(payload, payload_type, self.user_id, None, None, unix_time)
+                message = Packet.Message(payload, payload_type, user_id, None, None, unix_time)
                 self.handler.send_message(message, recipient)
             else:
                 BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')
         else:
-            message = Packet.Message(payload, payload_type, self.user_id)
+            message = Packet.Message(payload, payload_type, user_id)
             self.handler.send_message(message, recipient)
 
     def disconnect_inactive(self):
@@ -75,7 +77,7 @@ class Server:
 
         elif message.payloadtype == Packet.PayloadType.CHAT:
             # CHAT
-            self.broadcast(message.payloadtype, payload, message.unixtime)
+            self.broadcast(message.payloadtype, payload, message.unixtime, message.userid)
 
         elif message.payloadtype == Packet.PayloadType.DH_KEY:
             # DH KEY
@@ -90,6 +92,6 @@ class Server:
         else:
             BetterLog.log_incoming("Received Packet with null Payload Type")
 
-    def broadcast(self, payload_type: Packet.PayloadType, payload, unix_time: int | None):
+    def broadcast(self, payload_type: Packet.PayloadType, payload, unix_time: int | None, user_id: int):
         for client, connected_client in self.clients:
-            self.send_message(payload_type, client, payload, unix_time)
+            self.send_message(payload_type, client, payload, unix_time, user_id)

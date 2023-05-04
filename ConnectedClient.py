@@ -15,7 +15,7 @@ class ConnectedClient:
         self.should_hear_from_time = time.time_ns() + NetworkCommunicationConstants.HEARTBEAT_TIMEOUT_NS
 
     def has_heard_from_recently(self, current_time_ns: int) -> bool:
-        return self.should_hear_from_time < current_time_ns
+        return self.should_hear_from_time > current_time_ns
 
 
 class ClientList:

@@ -2,6 +2,7 @@ import time
 from typing import Tuple, Dict, List
 
 import BetterLog
+from EncryptionHandler import EncryptionHandler
 import NetworkCommunicationConstants
 
 
@@ -10,6 +11,7 @@ class ConnectedClient:
         self.user_id = user_id
         self.should_hear_from_time = 0
         self.heard_from()
+        self.encryption_handler = EncryptionHandler()
 
     def heard_from(self):
         self.should_hear_from_time = time.time_ns() + NetworkCommunicationConstants.HEARTBEAT_TIMEOUT_NS
@@ -50,4 +52,4 @@ class ClientList:
         return disconnecting
 
     def __iter__(self):
-        return iter(self.client_dictionary.keys())
+        return iter(self.client_dictionary.items())

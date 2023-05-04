@@ -1,5 +1,4 @@
 from typing import Tuple
-
 import ConnectedClient
 import NetworkCommunicationConstants
 import NetworkHandler
@@ -15,6 +14,17 @@ class Server:
         self.clients: ConnectedClient.ClientList = ConnectedClient.ClientList()
         self.disconnect_inactive()
 
+    def generate_dh_and_send_public(self, client: Tuple[str, int]):
+        self.clients.client_dictionary[client].encryption_handler.generate_dh_keys()
+        message = Packet.Message(self.clients.client_dictionary[client].encryption_handler.dh_public_key, Packet.PayloadType.DH_KEY, self.user_id)
+        self.handler.send_message(message, client)
+
+    def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes, client: Tuple[str, int]):
+        self.clients.client_dictionary[client].encryption_handler.received_other_public_key(other_public_key)
+        self.clients.client_dictionary[client].encryption_handler.self_prepared = True
+        message = Packet.Message(b'', Packet.PayloadType.PREPARED, self.user_id)
+        self.handler.send_message(message, client)
+
     def disconnect_inactive(self):
         self.clients.disconnect_inactive()
 
@@ -26,8 +36,11 @@ class Server:
         self.handler.send_message(message, recipient)
 
     def broadcast_text(self, text: str):
-        for client in self.clients:
-            self.send(text, client)
+        for client, connected_client in self.clients:
+            if connected_client.encryption_handler.is_prepared():
+                self.send(text, client)
+            else:
+                BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')
 
     def __recv__(self, message: Packet.Message):
         messageid: bytes = message.messageid
@@ -35,6 +48,9 @@ class Server:
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
             self.clients.received_connection(sender, message.userid)
+            t = threading.Thread(target=self.generate_dh_and_send_public, args=(sender, ))
+            t.daemon = True
+            t.start()
 
         elif message.payloadtype == Packet.PayloadType.DISCONNECT:
             # DISCONNECT
@@ -48,14 +64,27 @@ class Server:
             # CHAT
             self.broadcast(message)
 
+        elif message.payloadtype == Packet.PayloadType.DH_KEY:
+            # DH KEY
+            t = threading.Thread(target=self.generate_aes_gcm_and_send_prepared, args=(message.payload,sender))
+            t.daemon = True
+            t.start()
+
+        elif message.payloadtype == Packet.PayloadType.PREPARED:
+            # PREPARED
+            self.clients.client_dictionary[sender].encryption_handler.other_prepared = True
+
         else:
             BetterLog.log_incoming("Received Packet with null Payload Type")
 
     def broadcast(self, message: Packet.Message):
-        for client in self.clients:
-            payload = message.payload
-            unixtime = message.unixtime
-            user_id = message.userid
-            payload_type = message.payloadtype
-            mess = Packet.Message(payload, payload_type, user_id, None, None, unixtime)
-            self.handler.send_message(mess, client)
+        for client, connected_client in self.clients:
+            if connected_client.encryption_handler.is_prepared():
+                payload = message.payload
+                unixtime = message.unixtime
+                user_id = message.userid
+                payload_type = message.payloadtype
+                mess = Packet.Message(payload, payload_type, user_id, None, None, unixtime)
+                self.handler.send_message(mess, client)
+            else:
+                BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')

@@ -100,20 +100,31 @@ class Header:
 class PayloadType(Enum):
     """
     Type / format of message in the packet:
-        * CONNECT\n
+        * CONNECT
         * DISCONNECT
         * HEARTBEAT
         * CHAT
         * ACKNOWLEDGE
         * SELECTIVE_REPEAT
+        *
+        *
     """
 
+    # CONNECTION
     CONNECT = 0, False
     DISCONNECT = 1, False
     HEARTBEAT = 2, False
+
+    # COMMUNICATION
     CHAT = 3, True
+
+    # ACKNOWLEDGE
     ACKNOWLEDGE = 4, False
     SELECTIVE_REPEAT = 5, False
+
+    # ENCRYPTION
+    DH_KEY = 6, False
+    PREPARED = 7, False
 
     def __new__(cls, value: int, should_encrypt):
         obj = object.__new__(cls)

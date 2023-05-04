@@ -18,9 +18,10 @@ class EncryptionHandler:
         self.dh_public_key = None
         self.dh_private_key = None
 
-    def generate_dh_keys(self):
+    def generate_dh_keys(self) -> bytes:
         self.dh_private_key, self.dh_public_key = CryptWrapper.generate_dh_keys()
         BetterLog.log_text('DH KEYS GENERATED')
+        return self.dh_public_key
 
     def is_prepared(self):
         return self.self_prepared and self.other_prepared

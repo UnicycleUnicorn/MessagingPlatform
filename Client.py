@@ -21,8 +21,8 @@ class Client:
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):
-        self.encryption_handler.generate_dh_keys()
-        message = Packet.Message(self.encryption_handler.dh_public_key, Packet.PayloadType.DH_KEY, self.user_id)
+        dh_public = self.encryption_handler.generate_dh_keys()
+        message = Packet.Message(dh_public, Packet.PayloadType.DH_KEY, self.user_id)
         self.handler.send_message(message, None)
 
     def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes):

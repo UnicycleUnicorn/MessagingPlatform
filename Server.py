@@ -15,8 +15,8 @@ class Server:
         self.disconnect_inactive()
 
     def generate_dh_and_send_public(self, client: Tuple[str, int]):
-        self.clients.client_dictionary[client].encryption_handler.generate_dh_keys()
-        message = Packet.Message(self.clients.client_dictionary[client].encryption_handler.dh_public_key, Packet.PayloadType.DH_KEY, self.user_id)
+        dh_public = self.clients.client_dictionary[client].encryption_handler.generate_dh_keys()
+        message = Packet.Message(dh_public, Packet.PayloadType.DH_KEY, self.user_id)
         self.handler.send_message(message, client)
 
     def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes, client: Tuple[str, int]):

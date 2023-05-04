@@ -15,13 +15,15 @@ class Server:
         self.disconnect_inactive()
 
     def generate_dh_and_send_public(self, client: Tuple[str, int]):
-        dh_public = self.clients.client_dictionary[client].encryption_handler.generate_dh_keys()
+        dh_public, is_prepared = self.clients.client_dictionary[client].encryption_handler.generate_dh_keys()
         self.send_message(Packet.PayloadType.DH_KEY, client, dh_public)
+        if is_prepared:
+            self.send_message(Packet.PayloadType.PREPARED, client)
 
-    def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes, client: Tuple[str, int]):
-        self.clients.client_dictionary[client].encryption_handler.received_other_public_key(other_public_key)
-        self.clients.client_dictionary[client].encryption_handler.self_prepared = True
-        self.send_message(Packet.PayloadType.PREPARED, client)
+    def receive_other_dh_public(self, other_public_key: bytes, client: Tuple[str, int]):
+        is_prepared = self.clients.client_dictionary[client].encryption_handler.received_other_public_key(other_public_key)
+        if is_prepared:
+            self.send_message(Packet.PayloadType.PREPARED, client)
 
     def send_message(self, payload_type: Packet.PayloadType, recipient: Tuple[str, int], payload: bytes = b'', unix_time: None | int = None):
         if payload_type.should_encrypt():
@@ -77,7 +79,7 @@ class Server:
 
         elif message.payloadtype == Packet.PayloadType.DH_KEY:
             # DH KEY
-            t = threading.Thread(target=self.generate_aes_gcm_and_send_prepared, args=(message.payload, sender))
+            t = threading.Thread(target=self.receive_other_dh_public, args=(message.payload, sender))
             t.daemon = True
             t.start()
 

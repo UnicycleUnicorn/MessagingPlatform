@@ -22,13 +22,15 @@ class Client:
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):
-        dh_public = self.encryption_handler.generate_dh_keys()
+        dh_public, is_prepared = self.encryption_handler.generate_dh_keys()
         self.send_message(Packet.PayloadType.DH_KEY, dh_public)
+        if is_prepared:
+            self.send_message(Packet.PayloadType.PREPARED)
 
-    def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes):
-        self.encryption_handler.received_other_public_key(other_public_key)
-        self.encryption_handler.self_prepared = True
-        self.send_message(Packet.PayloadType.PREPARED)
+    def receive_other_dh_public(self, other_public_key: bytes):
+        is_prepared = self.encryption_handler.received_other_public_key(other_public_key)
+        if is_prepared:
+            self.send_message(Packet.PayloadType.PREPARED)
 
     def send_message(self, payload_type: Packet.PayloadType, payload: bytes = b''):
         if payload_type.should_encrypt():
@@ -80,7 +82,7 @@ class Client:
 
         elif message.payloadtype == Packet.PayloadType.DH_KEY:
             # DH KEY
-            t = threading.Thread(target=self.generate_aes_gcm_and_send_prepared, args=(message.payload,))
+            t = threading.Thread(target=self.receive_other_dh_public, args=(message.payload,))
             t.daemon = True
             t.start()
 

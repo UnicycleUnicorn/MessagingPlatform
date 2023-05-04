@@ -23,8 +23,8 @@ import random
 
 Version = '0.0-0.0'
 
-RUN_AS_SERVER = False
-USER_ID = random.randint(1, 4294967295)
+RUN_AS_SERVER = True
+USER_ID = random.randint(1, 4_294_967_295)
 PORT = 8888
 
 if RUN_AS_SERVER:

@@ -1,33 +1,29 @@
-from typing import Tuple, List
+from typing import Tuple
 
+import ConnectedClient
+import NetworkCommunicationConstants
 import NetworkHandler
 import Packet
 import BetterLog
+import threading
 
 
 class Server:
     def __init__(self, user_id: int = 0, port: int = 8888):
         self.handler = NetworkHandler.NetworkHandler(port, self.__recv__, user_id)
         self.user_id = user_id
-        self.clients: List[Tuple[str, int]] = []
+        self.clients: ConnectedClient.ClientList = ConnectedClient.ClientList()
+        self.disconnect_inactive()
+
+    def disconnect_inactive(self):
+        self.clients.disconnect_inactive()
+
+        # Create a timer to re-call this method in N ns
+        threading.Timer(NetworkCommunicationConstants.HEARTBEAT_POLL_TIME_S, self.disconnect_inactive).start()
 
     def send(self, message: str, recipient: Tuple[str, int]):
         message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, self.user_id)
         self.handler.send_message(message, recipient)
-
-    def add_client(self, client: Tuple[str, int]) -> bool:
-        if client not in self.clients:
-            self.clients.append(client)
-            BetterLog.log_text(f"ADDED NEW CLIENT: {client}")
-            return True
-        return False
-
-    def remove_client(self, client: Tuple[str, int]) -> bool:
-        if client in self.clients:
-            self.clients.remove(client)
-            BetterLog.log_text(f"REMOVED CLIENT: {client}")
-            return True
-        return False
 
     def broadcast_text(self, text: str):
         for client in self.clients:
@@ -38,15 +34,15 @@ class Server:
         sender: Tuple[str, int] = message.sender
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
-            self.add_client(sender)
+            self.clients.received_connection(sender, message.userid)
 
         elif message.payloadtype == Packet.PayloadType.DISCONNECT:
             # DISCONNECT
-            self.remove_client(sender)
+            self.clients.force_disconnect(sender)
 
         elif message.payloadtype == Packet.PayloadType.HEARTBEAT:
             # HEARTBEAT
-            self.add_client(sender)
+            self.clients.received_heartbeat(sender)
 
         elif message.payloadtype == Packet.PayloadType.CHAT:
             # CHAT

@@ -10,11 +10,16 @@ def ns_to_s(ns): return float(ns / 1_000_000_000)
 MAXIMUM_PACKET_SIZE_BYTES: int = 982 - 512
 ''' Maximum packet size (bytes) sent by our protocol, keep in mind that this does not include UDP headers '''
 
-HEARTBEAT_FREQUENCY_NS: int = 0
+HEARTBEAT_FREQUENCY_NS: int = 30_000_000_000
 ''' Frequency (ns) of heartbeats sent by client to server '''
+HEARTBEAT_FREQUENCY_S = ns_to_s(HEARTBEAT_FREQUENCY_NS)
 
-HEARTBEAT_TIMEOUT_NS: int = 0
+HEARTBEAT_TIMEOUT_NS: int = 180_000_000_000
 ''' Timeout (ns) of a client after not receiving a heartbeat '''
+
+HEARTBEAT_POLL_TIME_NS: int = 20_000_000_000
+''' Time (ns) between polls to determine if a client should be forcefully disconnected '''
+HEARTBEAT_POLL_TIME_S = ns_to_s(HEARTBEAT_POLL_TIME_NS)
 
 OUTGOING_BUFFER_SIZE_BYTES: int = 16_384
 ''' Size (bytes) of the output / send buffer '''

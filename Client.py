@@ -1,7 +1,9 @@
+import NetworkCommunicationConstants
 import NetworkHandler
 import Packet
 from typing import Tuple
 import BetterLog
+import threading
 
 
 class Client:
@@ -9,6 +11,14 @@ class Client:
         self.handler = NetworkHandler.NetworkHandler(port, self.__recv__, user_id, host=serverip)
         self.user_id = user_id
         self.handler.send_message(Packet.Message(b'', Packet.PayloadType.CONNECT, self.user_id), None)
+        self.send_heartbeat()
+
+    def send_heartbeat(self):
+        message = Packet.Message(b'', Packet.PayloadType.HEARTBEAT, self.user_id)
+        self.handler.send_message(message, None)
+
+        # Create a timer to re-call this method in N ns
+        threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def send(self, message: str):
         message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, self.user_id)

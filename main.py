@@ -37,7 +37,7 @@ if RUN_AS_SERVER:
 
 else:
     BetterLog.PRETTY_PRINT = True
-    client = Client.Client("10.127.15.85", USER_ID, port=PORT)
+    client = Client.Client("10.127.28.159", USER_ID, port=PORT)
     BetterLog.CALLBACK = client.send
     while True:
         message = input('Enter your message: ')

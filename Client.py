@@ -1,3 +1,5 @@
+import time
+
 import NetworkCommunicationConstants
 import NetworkHandler
 import Packet
@@ -23,6 +25,7 @@ class Client:
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):
+        time.sleep(0.01)
         dh_public, is_prepared = self.encryption_handler.generate_dh_keys()
         self.send_message(Packet.PayloadType.DH_KEY, dh_public)
         if is_prepared:

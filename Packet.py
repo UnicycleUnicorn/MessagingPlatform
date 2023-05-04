@@ -144,7 +144,7 @@ class PayloadType(Enum):
     def to_bytes(self):
         return self.bytes_value
 
-    def should_encrypt(self):
+    def should_encrypt(self) -> bool:
         return self._should_encrypt_
 
 

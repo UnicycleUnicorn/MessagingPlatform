@@ -27,9 +27,9 @@ class EncryptionHandler:
             self.dh_parameters = serialization.load_pem_parameters(dh_parameters, backend=default_backend())
 
     def generate_dh_keys(self) -> bytes:
+        BetterLog.log_text('GENERATING DH KEYS')
         self.dh_private_key, self.dh_public_key = CryptWrapper.generate_dh_keys(self.dh_parameters)
         BetterLog.log_text('DH KEYS GENERATED')
-        BetterLog.log_text(self.dh_public_key.decode())
         return self.dh_public_key
 
     def is_prepared(self):
@@ -37,15 +37,16 @@ class EncryptionHandler:
 
     def received_other_public_key(self, other_public_key: bytes):
         BetterLog.log_text('OTHER DH KEY RECEIVED')
-        BetterLog.log_text(other_public_key.decode())
         while self.dh_private_key is None:
             time.sleep(0.01)
-
+        BetterLog.log_text('GENERATING AES GCM KEYS')
         self.aes_gcm_shared_key = CryptWrapper.generate_aes_gcm_key(self.dh_private_key, other_public_key)
         BetterLog.log_text('AES GCM KEYS GENERATED')
         other_public_key = None
         self.dh_private_key = None
         self.dh_public_key = None
+        self.dh_parameters_bytes = None
+        self.dh_parameters = None
 
     def encrypt(self, plaintext: bytes) -> bytes:
         if self.aes_gcm_shared_key is None:

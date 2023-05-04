@@ -17,37 +17,48 @@ class Client:
         t.daemon = True
         t.start()
 
-        self.handler.send_message(Packet.Message(self.encryption_handler.dh_parameters_bytes, Packet.PayloadType.CONNECT, self.user_id), None)
+        self.handler.send_message(
+            Packet.Message(self.encryption_handler.dh_parameters_bytes, Packet.PayloadType.CONNECT, self.user_id), None)
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):
         dh_public = self.encryption_handler.generate_dh_keys()
-        message = Packet.Message(dh_public, Packet.PayloadType.DH_KEY, self.user_id)
-        self.handler.send_message(message, None)
+        self.send_message(Packet.PayloadType.DH_KEY, dh_public)
 
     def generate_aes_gcm_and_send_prepared(self, other_public_key: bytes):
         self.encryption_handler.received_other_public_key(other_public_key)
         self.encryption_handler.self_prepared = True
-        message = Packet.Message(b'', Packet.PayloadType.PREPARED, self.user_id)
-        self.handler.send_message(message, None)
+        self.send_message(Packet.PayloadType.PREPARED)
+
+    def send_message(self, payload_type: Packet.PayloadType, payload: bytes = b''):
+        if payload_type.should_encrypt():
+            if self.encryption_handler.is_prepared():
+                payload = self.encryption_handler.encrypt(payload)
+                message = Packet.Message(payload, payload_type, self.user_id)
+                self.handler.send_message(message, None)
+            else:
+                BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')
+        else:
+            message = Packet.Message(payload, payload_type, self.user_id)
+            self.handler.send_message(message, None)
 
     def send_heartbeat(self):
-        message = Packet.Message(b'', Packet.PayloadType.HEARTBEAT, self.user_id)
-        self.handler.send_message(message, None)
+        self.send_message(Packet.PayloadType.HEARTBEAT)
 
         # Create a timer to re-call this method in N ns
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def send(self, message: str):
-        if self.encryption_handler.is_prepared():
-            message = Packet.Message(message.encode(), Packet.PayloadType.CHAT, self.user_id)
-            self.handler.send_message(message, None)
-        else:
-            BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')
+        self.send_message(Packet.PayloadType.CHAT, message.encode())
 
     def __recv__(self, message: Packet.Message):
         messageid: bytes = message.messageid
         sender: Tuple[str, int] = message.sender
+
+        payload = message.payload
+        if message.payloadtype.should_encrypt():
+            payload = self.encryption_handler.decrypt(message.payload)
+
         if message.payloadtype == Packet.PayloadType.CONNECT:
             # CONNECT
             pass

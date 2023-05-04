@@ -74,9 +74,9 @@ class Client:
         elif message.payloadtype == Packet.PayloadType.CHAT:
             # CHAT
             if message.userid == self.user_id:
-                BetterLog.log_message_text(message.payload.decode(), str(message.userid), True)
+                BetterLog.log_message_text(payload.decode(), str(message.userid), True)
             else:
-                BetterLog.log_message_text(message.payload.decode(), str(message.userid))
+                BetterLog.log_message_text(payload.decode(), str(message.userid))
 
         elif message.payloadtype == Packet.PayloadType.DH_KEY:
             # DH KEY

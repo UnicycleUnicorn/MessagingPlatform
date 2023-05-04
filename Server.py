@@ -23,13 +23,12 @@ class Server:
         self.clients.client_dictionary[client].encryption_handler.self_prepared = True
         self.send_message(Packet.PayloadType.PREPARED, client)
 
-    def send_message(self, payload_type: Packet.PayloadType, recipient: Tuple[str, int], payload: bytes = b'',
-                     unix_time: None | int = None):
+    def send_message(self, payload_type: Packet.PayloadType, recipient: Tuple[str, int], payload: bytes = b'', unix_time: None | int = None):
         if payload_type.should_encrypt():
             if self.clients.client_dictionary[recipient].encryption_handler.is_prepared():
                 payload = self.clients.client_dictionary[recipient].encryption_handler.encrypt(payload)
                 message = Packet.Message(payload, payload_type, self.user_id, None, None, unix_time)
-                self.handler.send_message(message, None)
+                self.handler.send_message(message, recipient)
             else:
                 BetterLog.log_text('COULD NOT SEND MESSAGE: ENCRYPTION NOT READY')
         else:

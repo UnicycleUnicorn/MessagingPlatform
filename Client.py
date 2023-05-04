@@ -20,7 +20,6 @@ class Client:
         t.daemon = True
         t.start()
 
-
         threading.Timer(NetworkCommunicationConstants.HEARTBEAT_FREQUENCY_S, self.send_heartbeat).start()
 
     def generate_dh_and_send_public(self):

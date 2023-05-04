@@ -50,7 +50,7 @@ class Server:
         self.handler.send_message(message, recipient)
 
     def broadcast_text(self, text: str):
-        self.broadcast(Packet.PayloadType.CHAT, text.encode(), None)
+        self.broadcast(Packet.PayloadType.CHAT, text.encode(), None, self.user_id)
 
     def __recv__(self, message: Packet.Message):
         messageid: bytes = message.messageid

@@ -23,7 +23,7 @@ import random
 
 Version = '0.0-0.0'
 
-RUN_AS_SERVER = True
+RUN_AS_SERVER = False
 USER_ID = random.randint(1, 4_294_967_295)
 PORT = 8888
 
@@ -37,7 +37,7 @@ if RUN_AS_SERVER:
 
 else:
     BetterLog.PRETTY_PRINT = True
-    client = Client.Client("10.127.28.159", USER_ID, port=PORT)
+    client = Client.Client("10.127.15.88", USER_ID, port=PORT)
     BetterLog.CALLBACK = client.send
     while True:
         message = input('Enter your message: ')
